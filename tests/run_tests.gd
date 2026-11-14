@@ -79,6 +79,24 @@ func _test_reachable_cells() -> void:
 			break
 	_expect(valid, "Reachable destinations are empty, walkable, and within movement range")
 
+	var one_step_destination: Vector2i = mover.cell
+	for value in destinations:
+		var candidate: Vector2i = value
+		if int(distances[candidate]) == 1:
+			one_step_destination = candidate
+			break
+	var origin: Vector2i = mover.cell
+	_expect(one_step_destination != origin, "A starting player has a one-step destination")
+	if one_step_destination != origin:
+		var one_step_path: Array[Vector2i] = [one_step_destination]
+		await manager._move_unit(mover, one_step_path)
+		_expect(
+			mover.cell == one_step_destination \
+			and manager.occ.get(one_step_destination) == mover \
+			and not manager.occ.has(origin),
+			"Awaited movement updates the unit and occupancy atomically"
+		)
+
 	battle.queue_free()
 	await process_frame
 

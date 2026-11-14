@@ -7,6 +7,7 @@ const UnitDefinitionScript = preload("res://units/unit_definition.gd")
 const BattleHudScript = preload("res://ui/battle_hud.gd")
 
 enum Phase { PLAYER, ENEMY }
+enum ActionState { IDLE, MOVING, COMBAT, ENEMY_TURN }
 
 @export var board_path: NodePath
 @export var phase_label_path: NodePath
@@ -29,7 +30,7 @@ var end_turn_button: Button
 var hud
 
 var phase: Phase = Phase.PLAYER
-var busy: bool = false
+var action_state: ActionState = ActionState.IDLE
 
 var player_units: Array[Unit] = []
 var enemy_units: Array[Unit] = []
@@ -198,7 +199,7 @@ func _start_player_phase() -> void:
 	phase = Phase.PLAYER
 	phase_label.text = "Player Turn"
 	end_turn_button.disabled = false
-	busy = false
+	action_state = ActionState.IDLE
 
 	for u in player_units:
 		u.has_acted = false
@@ -222,13 +223,13 @@ func _start_enemy_phase() -> void:
 	_run_enemy_phase()
 
 func _on_end_turn_pressed() -> void:
-	if phase != Phase.PLAYER or busy:
+	if phase != Phase.PLAYER or _is_busy():
 		return
 	_start_enemy_phase()
 
 func _on_unit_clicked(u: Unit) -> void:
 	_focus_unit(u)
-	if busy:
+	if _is_busy():
 		return
 	if phase != Phase.PLAYER:
 		return
@@ -249,7 +250,7 @@ func _update_selection() -> void:
 	_refresh_highlight()
 
 func _on_cell_clicked(cell: Vector2i) -> void:
-	if busy:
+	if _is_busy():
 		return
 	if phase != Phase.PLAYER:
 		return
@@ -274,14 +275,15 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 			if selected != null and not selected.has_acted:
 				# If a move+attack route is possible (including hovered route), prefer it.
 				# This allows flanking/reposition attacks even when already adjacent.
-				if not selected_has_moved and _try_move_then_attack(selected, clicked_unit):
-					return
+				if not selected_has_moved:
+					var handled: bool = await _try_move_then_attack(selected, clicked_unit)
+					if handled:
+						return
 				if selected.can_attack(clicked_unit):
-					busy = true
-					_resolve_attack(selected, clicked_unit, func() -> void:
-						_finish_selected_action()
-						busy = false
-					)
+					action_state = ActionState.COMBAT
+					await _resolve_attack(selected, clicked_unit)
+					_finish_selected_action()
+					action_state = ActionState.IDLE
 					return
 
 			# If no combat command was possible, enemy click acts as pure focus/select.
@@ -320,77 +322,50 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	highlight.clear_cells()
 	_clear_hover_preview()
 	_reset_cursor_follow()
-	busy = true
-
-	_move_unit(selected, path, func():
-		selected_has_moved = true
-		selected_last_move_path = path.duplicate()
-		_update_selection()
-		if selected != null and not _has_attackable_enemy(selected):
-			_finish_selected_action()
-		busy = false
-	)
+	action_state = ActionState.MOVING
+	await _move_unit(selected, path)
+	selected_has_moved = true
+	selected_last_move_path = path.duplicate()
+	_update_selection()
+	if selected != null and not _has_attackable_enemy(selected):
+		_finish_selected_action()
+	action_state = ActionState.IDLE
 
 func _run_enemy_phase() -> void:
-	busy = true
+	action_state = ActionState.ENEMY_TURN
+	var acting_units: Array[Unit] = enemy_units.duplicate()
+	for enemy in acting_units:
+		if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive():
+			continue
 
-	_run_enemies_sequential(0)
+		var target: Unit = _pick_adjacent_opponent(enemy)
+		if target != null:
+			await _resolve_attack(enemy, target)
+			continue
 
-func _run_enemies_sequential(index: int) -> void:
-	if index >= enemy_units.size():
-		busy = false
-		_start_player_phase()
-		return
+		var reach: Dictionary = _reachable_destinations_for(enemy)
+		var options: Array[Vector2i] = reach["dests"]
+		if options.is_empty():
+			continue
 
-	var e: Unit = enemy_units[index]
-	if e == null or not is_instance_valid(e) or not e.is_alive():
-		_run_enemies_sequential(index + 1)
-		return
+		var destination: Vector2i = options[rng.randi_range(0, options.size() - 1)]
+		var path: Array[Vector2i] = _shortest_path_with_turn_bias(enemy, enemy.cell, destination)
+		if path.is_empty():
+			path = _reconstruct_path(reach["prev"], enemy.cell, destination)
+		await _move_unit(enemy, path)
 
-	var immediate_target: Unit = _pick_adjacent_opponent(e)
-	if immediate_target != null:
-		_resolve_attack(e, immediate_target, func() -> void:
-			var next_index_now: int = _next_enemy_index(index, e)
-			_run_enemies_sequential(next_index_now)
-		)
-		return
+		if is_instance_valid(enemy) and enemy.is_alive():
+			target = _pick_adjacent_opponent(enemy)
+			if target != null:
+				await _resolve_attack(enemy, target)
 
-	var reach: Dictionary = _reachable_destinations_for(e)
-	var options: Array[Vector2i] = reach["dests"]
-	var prev: Dictionary = reach["prev"]
+	_start_player_phase()
 
-	if options.is_empty():
-		_run_enemies_sequential(_next_enemy_index(index, e))
-		return
-
-	var dest: Vector2i = options[rng.randi_range(0, options.size() - 1)]
-	var path: Array[Vector2i] = _shortest_path_with_turn_bias(e, e.cell, dest)
-	if path.is_empty():
-		path = _reconstruct_path(prev, e.cell, dest)
-
-	_move_unit(e, path, func():
-		if e != null and is_instance_valid(e) and e.is_alive():
-			var post_move_target: Unit = _pick_adjacent_opponent(e)
-			if post_move_target != null:
-				_resolve_attack(e, post_move_target, func() -> void:
-					var next_index_after_attack: int = _next_enemy_index(index, e)
-					_run_enemies_sequential(next_index_after_attack)
-				)
-				return
-		var next_index: int = _next_enemy_index(index, e)
-		_run_enemies_sequential(next_index)
-	)
-
-func _move_unit(u: Unit, path: Array[Vector2i], done: Callable) -> void:
-	# Remove from occupancy while moving
+func _move_unit(u: Unit, path: Array[Vector2i]) -> void:
 	occ.erase(u.cell)
-
-	u.move_finished.connect(_on_move_finished.bind(done), CONNECT_ONE_SHOT)
-	u.move_along(path, board, 0.12)
-
-func _on_move_finished(u: Unit, done: Callable) -> void:
-	occ[u.cell] = u
-	done.call()
+	await u.move_along(path, board, 0.12)
+	if is_instance_valid(u):
+		occ[u.cell] = u
 
 func _cell_is_free(cell: Vector2i) -> bool:
 	return not occ.has(cell)
@@ -452,7 +427,7 @@ func _refresh_highlight() -> void:
 func _update_hover_preview() -> void:
 	if highlight == null or board == null:
 		return
-	if phase != Phase.PLAYER or busy or selected == null or selected.has_acted:
+	if phase != Phase.PLAYER or _is_busy() or selected == null or selected.has_acted:
 		_clear_hover_preview()
 		return
 
@@ -577,12 +552,10 @@ func _pick_adjacent_opponent(attacker: Unit) -> Unit:
 			return t
 	return null
 
-func _resolve_attack(attacker: Unit, defender: Unit, done: Callable = Callable()) -> void:
+func _resolve_attack(attacker: Unit, defender: Unit) -> void:
 	if attacker == null or defender == null:
-		_call_done(done)
 		return
 	if not attacker.can_attack(defender):
-		_call_done(done)
 		return
 
 	var first: Unit = attacker
@@ -591,43 +564,34 @@ func _resolve_attack(attacker: Unit, defender: Unit, done: Callable = Callable()
 		first = defender
 		second = attacker
 
-	_perform_attack_strike(first, second, func() -> void:
-		if not is_instance_valid(first) or not is_instance_valid(second):
-			_call_done(done)
-			return
-		if not first.is_alive() or not second.is_alive():
-			_call_done(done)
-			return
-		if not second.can_attack(first):
-			_refresh_stats_panel()
-			_call_done(done)
-			return
-		_perform_attack_strike(second, first, done)
-	)
+	await _perform_attack_strike(first, second)
+	if not is_instance_valid(first) or not is_instance_valid(second):
+		return
+	if not first.is_alive() or not second.is_alive():
+		return
+	if not second.can_attack(first):
+		_refresh_stats_panel()
+		return
+	await _perform_attack_strike(second, first)
 
-func _perform_attack_strike(attacker: Unit, defender: Unit, done: Callable = Callable()) -> void:
+func _perform_attack_strike(attacker: Unit, defender: Unit) -> void:
 	if attacker == null or defender == null:
-		_call_done(done)
 		return
 	if not attacker.can_attack(defender):
-		_call_done(done)
 		return
 
-	attacker.play_attack_animation(defender.global_position, func() -> void:
-		if not is_instance_valid(attacker) or not is_instance_valid(defender):
-			_call_done(done)
-			return
+	await attacker.play_attack_animation(defender.global_position)
+	if not is_instance_valid(attacker) or not is_instance_valid(defender):
+		return
 
-		var hit_chance: int = attacker.get_hit_chance_against(defender)
-		var roll: int = rng.randi_range(1, 100)
-		if roll <= hit_chance:
-			defender.take_damage(attacker.get_physical_damage())
-			if not defender.is_alive():
-				_remove_unit(defender)
+	var hit_chance: int = attacker.get_hit_chance_against(defender)
+	var roll: int = rng.randi_range(1, 100)
+	if roll <= hit_chance:
+		defender.take_damage(attacker.get_physical_damage())
+		if not defender.is_alive():
+			_remove_unit(defender)
 
-		_refresh_stats_panel()
-		_call_done(done)
-	)
+	_refresh_stats_panel()
 
 func _remove_unit(u: Unit) -> void:
 	if u == null:
@@ -735,48 +699,47 @@ func _try_move_then_attack(attacker: Unit, defender: Unit) -> bool:
 	var move_cell: Vector2i = choice["cell"]
 	var path: Array[Vector2i] = choice["path"]
 
-	busy = true
 	_reset_cursor_follow()
 
 	if move_cell == attacker.cell:
-		_resolve_attack(attacker, defender, func() -> void:
-			_finish_selected_action()
-			busy = false
-		)
+		action_state = ActionState.COMBAT
+		await _resolve_attack(attacker, defender)
+		_finish_selected_action()
+		action_state = ActionState.IDLE
 		return true
 
 	highlight.clear_cells()
 	_clear_hover_preview()
 	selected_last_move_path = path.duplicate()
-	_move_unit(attacker, path, func() -> void:
-		selected_has_moved = true
-		# This command is already committed to a specific target:
-		# keep move/attack overlays hidden between movement and impact.
-		highlight.show_cells([])
-		highlight.show_attack_cells([])
-		_clear_hover_preview()
+	action_state = ActionState.MOVING
+	await _move_unit(attacker, path)
+	selected_has_moved = true
+	# This command is already committed to a specific target: keep overlays
+	# hidden between movement and impact.
+	highlight.show_cells([])
+	highlight.show_attack_cells([])
+	_clear_hover_preview()
 
-		if not is_instance_valid(attacker) or not is_instance_valid(defender):
-			if selected != null and not _has_attackable_enemy(selected):
-				_finish_selected_action()
-			elif selected != null:
-				_update_selection()
-			busy = false
-			return
-
-		if attacker.is_alive() and defender.is_alive() and attacker.can_attack(defender):
-			_resolve_attack(attacker, defender, func() -> void:
-				_finish_selected_action()
-				busy = false
-			)
-			return
-
+	if not is_instance_valid(attacker) or not is_instance_valid(defender):
 		if selected != null and not _has_attackable_enemy(selected):
 			_finish_selected_action()
 		elif selected != null:
 			_update_selection()
-		busy = false
-	)
+		action_state = ActionState.IDLE
+		return true
+
+	if attacker.is_alive() and defender.is_alive() and attacker.can_attack(defender):
+		action_state = ActionState.COMBAT
+		await _resolve_attack(attacker, defender)
+		_finish_selected_action()
+		action_state = ActionState.IDLE
+		return true
+
+	if selected != null and not _has_attackable_enemy(selected):
+		_finish_selected_action()
+	elif selected != null:
+		_update_selection()
+	action_state = ActionState.IDLE
 	return true
 
 func _find_hovered_attack_choice(attacker: Unit, defender: Unit) -> Dictionary:
@@ -918,14 +881,8 @@ func _reset_cursor_follow() -> void:
 	cursor_follow_last = Vector2i.ZERO
 	cursor_follow_steps.clear()
 
-func _call_done(done: Callable) -> void:
-	if done.is_valid():
-		done.call()
-
-func _next_enemy_index(current_index: int, enemy_ref: Unit) -> int:
-	if current_index < enemy_units.size() and enemy_units[current_index] == enemy_ref:
-		return current_index + 1
-	return current_index
+func _is_busy() -> bool:
+	return action_state != ActionState.IDLE
 
 func _focus_unit(u: Unit) -> void:
 	hud.focus_unit(u)
@@ -960,7 +917,7 @@ func _cell_is_highlighted_for_selection(cell: Vector2i) -> bool:
 	return attack_cells_post_move.has(cell)
 
 func _handle_right_click_cancel() -> bool:
-	if phase != Phase.PLAYER or busy:
+	if phase != Phase.PLAYER or _is_busy():
 		return false
 
 	if selected != null:

@@ -144,13 +144,11 @@ func take_damage(amount: int) -> int:
 	queue_redraw()
 	return dmg
 
-func play_attack_animation(target_world_pos: Vector2, done: Callable = Callable()) -> void:
+func play_attack_animation(target_world_pos: Vector2) -> void:
 	var start_pos: Vector2 = global_position
 	var to_target: Vector2 = target_world_pos - start_pos
 	var distance: float = to_target.length()
 	if distance <= 0.001:
-		if done.is_valid():
-			done.call()
 		return
 
 	var dir: Vector2 = to_target / distance
@@ -163,11 +161,8 @@ func play_attack_animation(target_world_pos: Vector2, done: Callable = Callable(
 	tw.tween_property(self, "global_position", hit_pos, attack_lunge_time)
 	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_property(self, "global_position", start_pos, attack_return_time)
-	tw.finished.connect(func() -> void:
-		global_position = start_pos
-		if done.is_valid():
-			done.call()
-	, CONNECT_ONE_SHOT)
+	await tw.finished
+	global_position = start_pos
 
 func set_cell(new_cell: Vector2i, world_pos: Vector2) -> void:
 	cell = new_cell
@@ -214,10 +209,7 @@ func move_along(path: Array[Vector2i], board: Node, step_time: float = 0.12) -> 
 	var tw := create_tween()
 	for c in path:
 		tw.tween_property(self, "global_position", board.cell_to_world(c), step_time)
-
-	tw.finished.connect(func ():
-		cell = path[path.size() - 1]
-		is_moving = false
-		move_finished.emit(self)
-		)
-		
+	await tw.finished
+	cell = path[path.size() - 1]
+	is_moving = false
+	move_finished.emit(self)
