@@ -4,12 +4,14 @@ class_name TurnManager
 
 const GridNavigatorScript = preload("res://battle/grid_navigator.gd")
 const UnitDefinitionScript = preload("res://units/unit_definition.gd")
+const BattleHudScript = preload("res://ui/battle_hud.gd")
 
 enum Phase { PLAYER, ENEMY }
 
 @export var board_path: NodePath
 @export var phase_label_path: NodePath
 @export var end_turn_button_path: NodePath
+@export var hud_path: NodePath
 @export var unit_scene: PackedScene
 @export var player_unit_count: int = 1
 @export var enemy_unit_count: int = 1
@@ -24,10 +26,7 @@ enum Phase { PLAYER, ENEMY }
 var board: Board
 var phase_label: Label
 var end_turn_button: Button
-var stats_panel: PanelContainer
-var stats_scroll: ScrollContainer
-var stats_label: RichTextLabel
-var focused_unit: Unit = null
+var hud
 
 var phase: Phase = Phase.PLAYER
 var busy: bool = false
@@ -46,10 +45,6 @@ var hovered_move_path: Array[Vector2i] = []
 var cursor_follow_active: bool = false
 var cursor_follow_last: Vector2i = Vector2i.ZERO
 var cursor_follow_steps: Array[Vector2i] = []
-var preview_attacker: Unit = null
-var preview_defender: Unit = null
-var preview_attacker_cell: Vector2i = Vector2i.ZERO
-
 var occ: Dictionary = {} # Dictionary[Vector2i, Unit]
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var grid_navigator = GridNavigatorScript.new()
@@ -68,13 +63,16 @@ func _ready() -> void:
 
 	phase_label = get_node_or_null(phase_label_path) as Label
 	end_turn_button = get_node_or_null(end_turn_button_path) as Button
+	hud = get_node_or_null(hud_path)
+	if hud == null or hud.get_script() != BattleHudScript:
+		push_error("TurnManager: hud_path is not set to the shared BattleHud node.")
+		return
 	highlight = get_node_or_null(highlight_path) as HighlightMap
 	if highlight != null:
 		highlight.configure_from_board(board)
 
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	board.cell_clicked.connect(_on_cell_clicked)
-	_ensure_stats_ui()
 
 	_spawn_start_units()
 	_start_player_phase()
@@ -641,8 +639,8 @@ func _remove_unit(u: Unit) -> void:
 	if selected == u:
 		selected = null
 		selected_has_moved = false
-	if focused_unit == u:
-		focused_unit = null
+	if hud != null:
+		hud.forget_unit(u)
 
 	if is_instance_valid(u):
 		u.queue_free()
@@ -930,282 +928,23 @@ func _next_enemy_index(current_index: int, enemy_ref: Unit) -> int:
 	return current_index
 
 func _focus_unit(u: Unit) -> void:
-	if u == null or not is_instance_valid(u):
-		focused_unit = null
-	else:
-		focused_unit = u
-	_refresh_stats_panel()
+	hud.focus_unit(u)
 
 func _set_combat_preview(attacker: Unit, defender: Unit, attacker_cell: Vector2i) -> void:
-	if attacker == null or defender == null:
-		_clear_combat_preview()
-		return
-	var changed: bool = preview_attacker != attacker \
-		or preview_defender != defender \
-		or preview_attacker_cell != attacker_cell
-	preview_attacker = attacker
-	preview_defender = defender
-	preview_attacker_cell = attacker_cell
-	if changed:
-		_refresh_stats_panel()
+	hud.show_combat_preview(attacker, defender, attacker_cell)
 
 func _clear_combat_preview() -> void:
-	if preview_attacker == null and preview_defender == null:
-		return
-	preview_attacker = null
-	preview_defender = null
-	preview_attacker_cell = Vector2i.ZERO
-	_refresh_stats_panel()
-
-func _ensure_stats_ui() -> void:
-	if phase_label == null:
-		return
-
-	var ui_root: Node = phase_label.get_parent()
-	if ui_root == null:
-		return
-
-	stats_panel = PanelContainer.new()
-	stats_panel.name = "UnitStatsPanel"
-	stats_panel.visible = false
-	stats_panel.anchor_left = 0.0
-	stats_panel.anchor_top = 1.0
-	stats_panel.anchor_right = 0.0
-	stats_panel.anchor_bottom = 1.0
-	stats_panel.offset_left = 16.0
-	stats_panel.offset_top = -250.0
-	stats_panel.offset_right = 320.0
-	stats_panel.offset_bottom = -16.0
-	ui_root.add_child(stats_panel)
-
-	var margin: MarginContainer = MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 8)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_right", 8)
-	margin.add_theme_constant_override("margin_bottom", 8)
-	stats_panel.add_child(margin)
-
-	stats_scroll = ScrollContainer.new()
-	stats_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	stats_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	stats_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	stats_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	margin.add_child(stats_scroll)
-
-	stats_label = RichTextLabel.new()
-	stats_label.name = "StatsLabel"
-	stats_label.bbcode_enabled = true
-	stats_label.scroll_active = false
-	stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	stats_label.fit_content = true
-	stats_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	stats_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	stats_label.add_theme_constant_override("line_separation", -4)
-	stats_label.text = ""
-	stats_scroll.add_child(stats_label)
+	hud.clear_combat_preview()
 
 func _refresh_stats_panel() -> void:
-	if stats_panel == null or stats_label == null:
-		return
-
-	if preview_attacker != null \
-	and preview_defender != null \
-	and is_instance_valid(preview_attacker) \
-	and is_instance_valid(preview_defender) \
-	and preview_attacker.is_alive() \
-	and preview_defender.is_alive():
-		stats_panel.visible = true
-		var preview_side_unit: Unit = preview_defender
-		if focused_unit != null and is_instance_valid(focused_unit):
-			preview_side_unit = focused_unit
-		stats_label.text = _build_combat_preview_text(preview_attacker, preview_defender, preview_attacker_cell)
-		_position_stats_panel_for_unit(preview_side_unit)
-		return
-
-	if focused_unit == null or not is_instance_valid(focused_unit) or not focused_unit.is_alive():
-		stats_panel.visible = false
-		stats_label.text = ""
-		return
-
-	stats_panel.visible = true
-	stats_label.text = _build_default_unit_stats_text(focused_unit)
-	_position_stats_panel_for_unit(focused_unit)
-
-func _position_stats_panel_for_unit(u: Unit) -> void:
-	if stats_panel == null or stats_label == null:
-		return
-
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var max_content_w: float = max(80.0, viewport_size.x - 48.0)
-	var content_w: float = _measure_stats_text_width(max_content_w)
-	content_w = clampf(content_w, 80.0, max_content_w)
-
-	var content_h: float = _measure_stats_text_height(content_w)
-	stats_label.custom_minimum_size = Vector2(content_w, content_h)
-	stats_label.update_minimum_size()
-
-	var panel_w: float = content_w + 16.0
-	var desired_h: float = content_h + 16.0
-	var max_h: float = max(120.0, viewport_size.y - 32.0)
-	var panel_h: float = min(desired_h, max_h)
-
-	if stats_scroll != null:
-		stats_scroll.custom_minimum_size = Vector2(content_w, panel_h - 16.0)
-
-	stats_panel.anchor_left = 0.0
-	stats_panel.anchor_top = 0.0
-	stats_panel.anchor_right = 0.0
-	stats_panel.anchor_bottom = 0.0
-
-	var is_enemy: bool = u != null and u.faction == Unit.Faction.ENEMY
-	var panel_x: float = 16.0
-	if is_enemy:
-		panel_x = viewport_size.x - panel_w - 16.0
-		stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	else:
-		stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-
-	var panel_y: float = viewport_size.y - panel_h - 16.0
-	stats_panel.offset_left = panel_x
-	stats_panel.offset_top = panel_y
-	stats_panel.offset_right = panel_x + panel_w
-	stats_panel.offset_bottom = panel_y + panel_h
-
-func _measure_stats_text_width(max_content_w: float) -> float:
-	if stats_label == null:
-		return 80.0
-	var font: Font = stats_label.get_theme_font("font")
-	var font_size: int = stats_label.get_theme_font_size("font_size")
-	if font == null:
-		return min(max_content_w, stats_label.get_combined_minimum_size().x)
-	var plain_text: String = _strip_bbcode_tags(stats_label.text)
-	var measured: Vector2 = font.get_multiline_string_size(
-		plain_text,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		100000.0,
-		font_size
-	)
-	return min(max_content_w, ceil(measured.x) + 2.0)
-
-func _measure_stats_text_height(content_w: float) -> float:
-	if stats_label == null:
-		return 0.0
-	var font: Font = stats_label.get_theme_font("font")
-	var font_size: int = stats_label.get_theme_font_size("font_size")
-	if font == null:
-		return stats_label.get_combined_minimum_size().y
-	var plain_text: String = _strip_bbcode_tags(stats_label.text)
-	var measured: Vector2 = font.get_multiline_string_size(
-		plain_text,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		content_w,
-		font_size
-	)
-	var line_count: int = max(1, plain_text.count("\n") + 1)
-	var line_sep: int = stats_label.get_theme_constant("line_separation")
-	return max(1.0, measured.y + float(line_sep * max(0, line_count - 1)))
-
-func _strip_bbcode_tags(text_value: String) -> String:
-	var rx: RegEx = RegEx.new()
-	var err: int = rx.compile("\\[/?[^\\]]+\\]")
-	if err != OK:
-		return text_value
-	return rx.sub(text_value, "", true)
-
-func _build_default_unit_stats_text(u: Unit) -> String:
-	if u == null:
-		return ""
-	var crit_chance: int = int(u.precision / 5)
-	var title_text: String = "[b]%s[/b]" % u.get_display_name()
-	var attack_type: String = "Melee Attack"
-	var attack_line: String = "Dmg: %d | Hit: %d%% | Crit: %d%%" % [u.strength, u.precision, crit_chance]
-	if u.attack_range > 1:
-		attack_type = "Ranged Attack"
-		attack_line += " | Rng: %d" % u.attack_range
-	return "%s\nHP: %d/%d | Arm: %d | Evd: %d\n\n%s\n%s\n\nStats\nHP: %d | Str: %d | Spd: %d | Pre: %d | Int: %d" % [
-		title_text,
-		u.current_hp,
-		u.health,
-		u.armor,
-		u.speed,
-		attack_type,
-		attack_line,
-		u.health,
-		u.strength,
-		u.speed,
-		u.precision,
-		u.intellect
-	]
-
-func _build_combat_preview_text(attacker: Unit, defender: Unit, attacker_cell: Vector2i) -> String:
-	var attacker_can: bool = _can_attack_from_cell(attacker, attacker_cell, defender.cell)
-	var defender_can: bool = _can_attack_from_cell(defender, defender.cell, attacker_cell)
-	if not attacker_can:
-		return "Combat Preview\nCannot attack from current position."
-
-	var attacker_hit: int = attacker.get_hit_chance_against(defender)
-	var defender_hit: int = defender.get_hit_chance_against(attacker)
-	var attacker_dmg: int = attacker.get_physical_damage()
-	var defender_dmg: int = defender.get_physical_damage()
-
-	var attacker_hp_after: int = attacker.current_hp
-	var defender_hp_after: int = defender.current_hp
-
-	var first_striker: String = "Attacker"
-	var attacker_strikes_first: bool = true
-	if defender.speed > attacker.speed and defender_can:
-		first_striker = "Defender"
-		attacker_strikes_first = false
-
-	if attacker_strikes_first:
-		defender_hp_after = maxi(0, defender_hp_after - attacker_dmg)
-		if defender_hp_after > 0 and defender_can:
-			attacker_hp_after = maxi(0, attacker_hp_after - defender_dmg)
-	else:
-		attacker_hp_after = maxi(0, attacker_hp_after - defender_dmg)
-		if attacker_hp_after > 0 and attacker_can:
-			defender_hp_after = maxi(0, defender_hp_after - attacker_dmg)
-
-	return "Combat Preview\nFirst strike: %s\n\nAttacker (%s)\nHP: %d/%d\nStrength: %d\nSpeed: %d\nPrecision: %d\nHit: %d%%\nDamage: %d\nHP After (if hits): %d\n\nDefender (%s)\nHP: %d/%d\nStrength: %d\nSpeed: %d\nPrecision: %d\nHit: %d%%\nDamage: %d\nHP After (if hits): %d" % [
-		first_striker,
-		_faction_label(attacker),
-		attacker.current_hp,
-		attacker.health,
-		attacker.strength,
-		attacker.speed,
-		attacker.precision,
-		attacker_hit,
-		attacker_dmg,
-		attacker_hp_after,
-		_faction_label(defender),
-		defender.current_hp,
-		defender.health,
-		defender.strength,
-		defender.speed,
-		defender.precision,
-		defender_hit,
-		defender_dmg,
-		defender_hp_after
-	]
-
-func _can_attack_from_cell(attacker: Unit, attacker_cell: Vector2i, defender_cell: Vector2i) -> bool:
-	if attacker == null or not attacker.is_alive():
-		return false
-	return _manhattan(attacker_cell, defender_cell) <= attacker.attack_range
-
-func _faction_label(u: Unit) -> String:
-	if u == null:
-		return "Unknown"
-	if u.faction == Unit.Faction.ENEMY:
-		return "Enemy"
-	return "Player"
+	hud.refresh()
 
 func _is_empty_click_unselect(cell: Vector2i) -> bool:
 	if occ.has(cell):
 		return false
 	if selected != null:
 		return not _cell_is_highlighted_for_selection(cell)
-	return focused_unit != null
+	return hud.focused_unit != null
 
 func _cell_is_highlighted_for_selection(cell: Vector2i) -> bool:
 	if selected == null:
@@ -1232,7 +971,7 @@ func _handle_right_click_cancel() -> bool:
 		_focus_unit(null)
 		return true
 
-	if focused_unit != null:
+	if hud.focused_unit != null:
 		_focus_unit(null)
 		return true
 

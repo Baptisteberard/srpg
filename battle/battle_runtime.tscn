@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://unit_hp_overlay.gd" id="5_hp"]
 [ext_resource type="Script" path="res://turn_manager.gd" id="6_turns"]
 [ext_resource type="PackedScene" path="res://unit.tscn" id="7_unit"]
+[ext_resource type="Script" path="res://ui/battle_hud.gd" id="8_hud"]
 
 [node name="BattleRuntime" type="Node"]
 script = ExtResource("1_runtime")
@@ -31,6 +32,7 @@ board_path = NodePath("../../Board")
 script = ExtResource("5_hp")
 
 [node name="UI" type="CanvasLayer" parent="."]
+script = ExtResource("8_hud")
 
 [node name="PhaseLabel" type="Label" parent="UI"]
 offset_right = 40.0
@@ -52,5 +54,6 @@ script = ExtResource("6_turns")
 board_path = NodePath("../../Board")
 phase_label_path = NodePath("../UI/PhaseLabel")
 end_turn_button_path = NodePath("../UI/EndTurnButton")
+hud_path = NodePath("../UI")
 unit_scene = ExtResource("7_unit")
 highlight_path = NodePath("../Highlight")
