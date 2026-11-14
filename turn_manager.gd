@@ -2,13 +2,9 @@
 extends Node
 class_name TurnManager
 
+const GridNavigatorScript = preload("res://battle/grid_navigator.gd")
+
 enum Phase { PLAYER, ENEMY }
-const CARDINAL_DIRS: Array[Vector2i] = [
-	Vector2i.RIGHT,
-	Vector2i.LEFT,
-	Vector2i.DOWN,
-	Vector2i.UP
-]
 
 @export var board_path: NodePath
 @export var phase_label_path: NodePath
@@ -61,6 +57,7 @@ var preview_attacker_cell: Vector2i = Vector2i.ZERO
 
 var occ: Dictionary = {} # Dictionary[Vector2i, Unit]
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var grid_navigator = GridNavigatorScript.new()
 
 @export var highlight_path: NodePath
 var highlight: HighlightMap
@@ -72,6 +69,7 @@ func _ready() -> void:
 	if board == null:
 		push_error("TurnManager: board_path is not set to a Board node. Drag Board into board_path in the Inspector.")
 		return
+	grid_navigator.configure(board, occ)
 
 	phase_label = get_node_or_null(phase_label_path) as Label
 	end_turn_button = get_node_or_null(end_turn_button_path) as Button
@@ -422,34 +420,6 @@ func _cell_is_free(cell: Vector2i) -> bool:
 func _manhattan(a: Vector2i, b: Vector2i) -> int:
 	return abs(a.x - b.x) + abs(a.y - b.y)
 
-func _cells_in_range(origin: Vector2i, r: int) -> Array[Vector2i]:
-	var out: Array[Vector2i] = []
-	for dx in range(-r, r + 1):
-		for dy in range(-r, r + 1):
-			if abs(dx) + abs(dy) <= r:
-				var c: Vector2i = Vector2i(origin.x + dx, origin.y + dy)
-				if board.in_bounds(c):
-					out.append(c)
-	return out
-
-func _path_manhattan(from: Vector2i, to: Vector2i) -> Array[Vector2i]:
-	# No obstacles: simple shortest path (horizontal then vertical)
-	var path: Array[Vector2i] = []
-	var cur: Vector2i = from
-
-	while cur.x != to.x:
-		cur = Vector2i(cur.x + _signi(to.x - cur.x), cur.y)
-		path.append(cur)
-
-	while cur.y != to.y:
-		cur = Vector2i(cur.x, cur.y + _signi(to.y - cur.y))
-		path.append(cur)
-
-	return path
-
-func _signi(v: int) -> int:
-	return 1 if v > 0 else (-1 if v < 0 else 0)
-
 func _make_circle_texture(color: Color) -> Texture2D:
 	var s: int = 64
 	var img: Image = Image.create(s, s, false, Image.FORMAT_RGBA8)
@@ -569,211 +539,19 @@ func _clear_hover_preview() -> void:
 		highlight.clear_preview_path()
 	
 func _cell_walkable_for_mover(cell: Vector2i, mover: Unit) -> bool:
-	# 1) Tile obstacle or void
-	if board.is_blocked(cell):
-		return false
-
-	# 2) Unit traversal rules
-	if not occ.has(cell):
-		return true
-
-	var occupant: Unit = occ[cell]
-	if occupant == mover:
-		return true
-
-	return not occupant.blocks_movement_for(mover.faction)
+	return grid_navigator.cell_walkable_for(cell, mover)
 
 func _bfs_from(mover: Unit) -> Dictionary:
-	var start: Vector2i = mover.cell
-	var max_d: int = mover.move_range
-
-	var dist: Dictionary = { start: 0 }
-	var prev: Dictionary = {}
-
-	var queue: Array[Vector2i] = [start]
-	var qi: int = 0
-
-	while qi < queue.size():
-		var cur: Vector2i = queue[qi]
-		qi += 1
-
-		var d: int = dist[cur]
-
-		for dir in CARDINAL_DIRS:
-			var nxt: Vector2i = cur + dir
-
-			if not board.in_bounds(nxt):
-				continue
-			if dist.has(nxt):
-				continue
-
-			var nd: int = d + 1
-			if nd > max_d:
-				continue
-
-			if not _cell_walkable_for_mover(nxt, mover):
-				continue
-
-			dist[nxt] = nd
-			prev[nxt] = cur
-			queue.append(nxt)
-
-	return { "dist": dist, "prev": prev }
+	return grid_navigator.reachable_from(mover)
 
 func _reconstruct_path(prev: Dictionary, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
-	var path: Array[Vector2i] = []
-	if goal == start:
-		return path
-	if not prev.has(goal):
-		return path
-
-	var cur: Vector2i = goal
-	while cur != start:
-		path.push_front(cur)
-		cur = prev[cur]
-	return path
-
-func _bfs_distances_from(mover: Unit, origin: Vector2i) -> Dictionary:
-	var dist: Dictionary = {}
-	if mover == null or board == null:
-		return dist
-
-	dist[origin] = 0
-	var queue: Array[Vector2i] = [origin]
-	var qi: int = 0
-
-	while qi < queue.size():
-		var cur: Vector2i = queue[qi]
-		qi += 1
-		var d: int = int(dist[cur])
-
-		for dir in CARDINAL_DIRS:
-			var nxt: Vector2i = cur + dir
-			if not board.in_bounds(nxt):
-				continue
-			if dist.has(nxt):
-				continue
-			if not _cell_walkable_for_mover(nxt, mover):
-				continue
-			dist[nxt] = d + 1
-			queue.append(nxt)
-
-	return dist
+	return grid_navigator.reconstruct_path(prev, start, goal)
 
 func _shortest_path_with_turn_bias(mover: Unit, start: Vector2i, goal: Vector2i) -> Array[Vector2i]:
-	var out: Array[Vector2i] = []
-	if mover == null:
-		return out
-	if start == goal:
-		return out
-
-	var dist_start: Dictionary = _bfs_distances_from(mover, start)
-	if not dist_start.has(goal):
-		return out
-
-	var dist_goal: Dictionary = _bfs_distances_from(mover, goal)
-	if not dist_goal.has(start):
-		return out
-
-	var shortest_len: int = int(dist_start[goal])
-	var memo: Dictionary = {}
-	var best: Dictionary = _best_turn_path_step(
-		mover,
-		start,
-		goal,
-		Vector2i.ZERO,
-		dist_start,
-		dist_goal,
-		shortest_len,
-		memo
-	)
-	if best.is_empty():
-		return out
-	return best["path"]
-
-func _best_turn_path_step(
-	mover: Unit,
-	cur: Vector2i,
-	goal: Vector2i,
-	last_dir: Vector2i,
-	dist_start: Dictionary,
-	dist_goal: Dictionary,
-	shortest_len: int,
-	memo: Dictionary
-) -> Dictionary:
-	if cur == goal:
-		return {"turns": 0, "path": []}
-
-	var key: String = "%d,%d|%d,%d" % [cur.x, cur.y, last_dir.x, last_dir.y]
-	if memo.has(key):
-		return memo[key]
-
-	var best_turns: int = -1_000_000
-	var best_path: Array[Vector2i] = []
-	var cur_dist: int = int(dist_start[cur])
-
-	for dir in CARDINAL_DIRS:
-		var nxt: Vector2i = cur + dir
-		if not board.in_bounds(nxt):
-			continue
-		if not dist_start.has(nxt) or not dist_goal.has(nxt):
-			continue
-		if int(dist_start[nxt]) != cur_dist + 1:
-			continue
-		if int(dist_start[nxt]) + int(dist_goal[nxt]) != shortest_len:
-			continue
-		if not _cell_walkable_for_mover(nxt, mover):
-			continue
-
-		var child: Dictionary = _best_turn_path_step(
-			mover,
-			nxt,
-			goal,
-			dir,
-			dist_start,
-			dist_goal,
-			shortest_len,
-			memo
-		)
-		if child.is_empty():
-			continue
-
-		var turns: int = int(child["turns"])
-		if last_dir != Vector2i.ZERO and dir != last_dir:
-			turns += 1
-
-		if turns > best_turns:
-			best_turns = turns
-			var candidate: Array[Vector2i] = [nxt]
-			for step in child["path"]:
-				candidate.append(step)
-			best_path = candidate
-
-	if best_turns < -999_999:
-		memo[key] = {}
-		return {}
-
-	var out: Dictionary = {"turns": best_turns, "path": best_path}
-	memo[key] = out
-	return out
+	return grid_navigator.shortest_path(mover, start, goal)
 
 func _reachable_destinations_for(mover: Unit) -> Dictionary:
-	# Returns { "dests": Array[Vector2i], "prev": Dictionary }
-	var bfs: Dictionary = _bfs_from(mover)
-	var dist: Dictionary = bfs["dist"]
-	var prev: Dictionary = bfs["prev"]
-
-	var dests: Array[Vector2i] = []
-	for c in dist.keys():
-		var cell: Vector2i = c
-		if cell == mover.cell:
-			continue
-		# Destination must be empty (even if traversable)
-		if occ.has(cell):
-			continue
-		dests.append(cell)
-
-	return { "dests": dests, "prev": prev }
+	return grid_navigator.reachable_destinations(mover)
 
 func _select_unit(u: Unit) -> void:
 	if u == null:
