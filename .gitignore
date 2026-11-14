@@ -1,0 +1,7 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Local tooling caches and machine-specific editor settings
+.sfdx/
+.vscode/settings.json

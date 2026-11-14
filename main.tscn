@@ -1,0 +1,38 @@
+[gd_scene format=4]
+
+[ext_resource type="Script" path="res://main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://game.tscn" id="2_map1"]
+[ext_resource type="PackedScene" path="res://game_map2.tscn" id="3_map2"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+map1_scene = ExtResource("2_map1")
+map2_scene = ExtResource("3_map2")
+
+[node name="GameRoot" type="Node2D" parent="."]
+
+[node name="Menu" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="PanelContainer" parent="Menu"]
+offset_left = 500.0
+offset_top = 250.0
+offset_right = 780.0
+offset_bottom = 470.0
+
+[node name="VBox" type="VBoxContainer" parent="Menu/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Menu/Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Choose Map"
+horizontal_alignment = 1
+
+[node name="Map1Button" type="Button" parent="Menu/Panel/VBox"]
+layout_mode = 2
+text = "Map 1"
+
+[node name="Map2Button" type="Button" parent="Menu/Panel/VBox"]
+layout_mode = 2
+text = "Map 2"

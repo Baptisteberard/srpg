@@ -1,0 +1,93 @@
+[gd_scene format=4 uid="uid://bw30oe3epo7yb"]
+
+[ext_resource type="Script" uid="uid://3g8uuu5qjoi2" path="res://board.gd" id="1_e2o6t"]
+[ext_resource type="Texture2D" uid="uid://dtt5t876b7jo8" path="res://tiles/tileset_grass.png" id="1_ryrav"]
+[ext_resource type="Texture2D" uid="uid://bjmv5h6q16jte" path="res://tiles/elaborated_stone.png" id="2_3n5cy"]
+[ext_resource type="Script" uid="uid://bk8drm3y8kopc" path="res://highlight.gd" id="2_fc0e3"]
+[ext_resource type="Script" uid="uid://dxcbw5s07eqfi" path="res://turn_manager.gd" id="2_feb5d"]
+[ext_resource type="PackedScene" uid="uid://cxtorhlqusp6i" path="res://unit.tscn" id="3_feb5d"]
+[ext_resource type="Script" uid="uid://bshrn52lasrtk" path="res://camera_controller.gd" id="4_cam"]
+[ext_resource type="Script" uid="uid://bkbluae6wer1g" path="res://coord_overlay.gd" id="5_coord"]
+[ext_resource type="Script" path="res://unit_hp_overlay.gd" id="6_hpovl"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_j5wjh"]
+texture = ExtResource("1_ryrav")
+texture_region_size = Vector2i(128, 128)
+0:0/0 = 0
+1:0/0 = 0
+1:0/0/custom_data_0 = true
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_v4kqd"]
+texture = ExtResource("2_3n5cy")
+texture_region_size = Vector2i(128, 142)
+0:0/0 = 0
+0:0/0/texture_origin = Vector2i(0, -39)
+0:1/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_vef74"]
+tile_shape = 0
+tile_size = Vector2i(128, 128)
+uv_clipping = true
+custom_data_layer_0/name = "blocked"
+custom_data_layer_0/type = 1
+sources/0 = SubResource("TileSetAtlasSource_j5wjh")
+sources/1 = SubResource("TileSetAtlasSource_v4kqd")
+
+[node name="GameMap2" type="Node2D" unique_id=664902788]
+
+[node name="Board" type="TileMapLayer" parent="." unique_id=1695525410]
+y_sort_enabled = false
+texture_filter = 2
+texture_repeat = 1
+tile_map_data = PackedByteArray("AAD//wMAAQAAAAAAAAD//wIAAQAAAAAAAAD+/wEAAQAAAAAAAAD+/wAAAQAAAAAAAAD9////AQAAAAAAAAD//wAAAQAAAAAAAAD/////AQAAAAAAAAAAAP7/AQAAAAAAAAAAAP3/AQAAAAAAAAABAP//AQAAAAAAAAABAAAAAQAAAAAAAAAAAAEAAQAAAAAAAAAAAAIAAQAAAAAAAAD//wEAAQAAAAAAAAAAAAAAAQAAAAAAAAAAAP//AQAAAAAAAAABAP7/AQAAAAAAAAAAAPz/AQAAAAAAAAD///z/AQAAAAAAAAD///v/AQAAAAAAAAD+//3/AQAAAAAAAAD+//7/AQAAAAAAAAD///3/AQAAAAAAAAD///7/AQAAAAAAAAD+////AQAAAAAAAAD///n/AQAAAAAAAAD///r/AQAAAAAAAAD+//v/AQAAAAAAAAD+//z/AQAAAAAAAAD9//3/AQAAAAAAAAD9//7/AQAAAAAAAAD8////AQAAAAAAAAD9/wAAAQAAAAAAAAD9/wEAAQAAAAAAAAD+/wIAAQAAAAAAAAD+/wMAAQAAAAAAAAD//wQAAQAAAAAAAAD//wUAAQAAAAAAAAAAAAQAAQAAAAAAAAAAAAMAAQAAAAAAAAABAAIAAQAAAAAAAAABAAEAAQAAAAAAAAACAAAAAQAAAAAAAAACAP//AQAAAAAAAAACAP7/AQAAAAAAAAABAP3/AQAAAAAAAAABAPz/AQAAAAAAAAAAAPv/AQAAAAAAAAAAAPr/AQAAAAAAAAD7////AQAAAAAAAAD8/wAAAQAAAAAAAAD8/wEAAQAAAAAAAAD9/wIAAQAAAAAAAAD9/wMAAQAAAAAAAAD+/wQAAQAAAAAAAAD+/wUAAQAAAAAAAAD//wYAAQAAAAAAAAD//wcAAQAAAAAAAAAAAAYAAQAAAAAAAAAAAAUAAQAAAAAAAAABAAQAAQAAAAAAAAABAAMAAQAAAAAAAAACAAIAAQAAAAAAAAADAAAAAQAAAAAAAAADAP//AQAAAAAAAAACAAEAAQAAAAAAAAADAP7/AQAAAAAAAAACAP3/AQAAAAAAAAACAPz/AQAAAAAAAAABAPv/AQAAAAAAAAABAPr/AQAAAAAAAAAAAPn/AQAAAAAAAAAAAPj/AQAAAAAAAAD///f/AQAAAAAAAAD///j/AQAAAAAAAAD+//n/AQAAAAAAAAD+//r/AQAAAAAAAAD9//v/AQAAAAAAAAD9//z/AQAAAAAAAAD8//3/AQAAAAAAAAD8//7/AQAAAAAAAAA=")
+tile_set = SubResource("TileSet_vef74")
+script = ExtResource("1_e2o6t")
+
+[node name="TreeLayer" type="TileMapLayer" parent="." unique_id=1790000224]
+y_sort_enabled = false
+texture_filter = 2
+texture_repeat = 1
+tile_set = SubResource("TileSet_vef74")
+
+[node name="Highlight" type="Node2D" parent="." unique_id=999458790]
+z_index = 1
+script = ExtResource("2_fc0e3")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1996510111]
+script = ExtResource("4_cam")
+board_path = NodePath("../Board")
+
+[node name="CoordOverlay" type="Node2D" parent="." unique_id=1400498026]
+z_index = 20
+script = ExtResource("5_coord")
+board_path = NodePath("../Board")
+
+[node name="HpOverlay" type="Node2D" parent="."]
+script = ExtResource("6_hpovl")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=2114992824]
+
+[node name="PhaseLabel" type="Label" parent="UI" unique_id=143802991]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="EndTurnButton" type="Button" parent="UI" unique_id=719138984]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -140.0
+offset_top = 40.0
+offset_right = -90.0
+offset_bottom = 90.0
+grow_horizontal = 0
+text = "End Turn"
+
+[node name="TurnManager" type="Node" parent="." unique_id=1552275210]
+script = ExtResource("2_feb5d")
+board_path = NodePath("../Board")
+phase_label_path = NodePath("../UI/PhaseLabel")
+end_turn_button_path = NodePath("../UI/EndTurnButton")
+unit_scene = ExtResource("3_feb5d")
+player_unit_count = 2
+enemy_unit_count = 2
+highlight_path = NodePath("../Highlight")
