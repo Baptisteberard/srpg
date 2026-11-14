@@ -3,6 +3,7 @@ extends Node
 class_name TurnManager
 
 const GridNavigatorScript = preload("res://battle/grid_navigator.gd")
+const UnitDefinitionScript = preload("res://units/unit_definition.gd")
 
 enum Phase { PLAYER, ENEMY }
 
@@ -12,16 +13,10 @@ enum Phase { PLAYER, ENEMY }
 @export var unit_scene: PackedScene
 @export var player_unit_count: int = 1
 @export var enemy_unit_count: int = 1
-@export_group("Default Unit Stats")
-@export var default_unit_health: int = 20
-@export var default_unit_strength: int = 12
-@export var default_unit_speed: int = 0
-@export_range(0, 100, 1) var default_unit_precision: int = 100
-@export var default_unit_intellect: int = 0
-@export var default_unit_armor: int = 0
-@export_group("Per-Unit Stat Overrides")
-@export var player_unit_stats: Array[UnitStats] = []
-@export var enemy_unit_stats: Array[UnitStats] = []
+@export_group("Unit Definitions")
+@export var default_unit_definition: UnitStats
+@export var player_unit_definitions: Array[UnitStats] = []
+@export var enemy_unit_definitions: Array[UnitStats] = []
 @export_group("Visuals")
 @export var player_unit_color: Color = Color8(51, 153, 255, 255)
 @export var enemy_unit_color: Color = Color8(255, 51, 51, 255)
@@ -108,10 +103,10 @@ func _spawn_start_units() -> void:
 
 	for i in range(player_starts.size()):
 		var player_cell: Vector2i = player_starts[i]
-		_add_unit(Unit.Faction.PLAYER, player_cell, player_tex, _stats_override_for(Unit.Faction.PLAYER, i))
+		_add_unit(Unit.Faction.PLAYER, player_cell, player_tex, _definition_for(Unit.Faction.PLAYER, i))
 	for i in range(enemy_starts.size()):
 		var enemy_cell: Vector2i = enemy_starts[i]
-		_add_unit(Unit.Faction.ENEMY, enemy_cell, enemy_tex, _stats_override_for(Unit.Faction.ENEMY, i))
+		_add_unit(Unit.Faction.ENEMY, enemy_cell, enemy_tex, _definition_for(Unit.Faction.ENEMY, i))
 
 func _find_auto_spawns(player_count: int, enemy_count: int) -> Dictionary:
 	var walkable: Array[Vector2i] = []
@@ -155,15 +150,17 @@ func _find_auto_spawns(player_count: int, enemy_count: int) -> Dictionary:
 
 	return {"players": players, "enemies": enemies}
 
-func _stats_override_for(faction: Unit.Faction, spawn_index: int) -> UnitStats:
-	var overrides: Array[UnitStats] = player_unit_stats
+func _definition_for(faction: Unit.Faction, spawn_index: int) -> UnitStats:
+	var overrides: Array[UnitStats] = player_unit_definitions
 	if faction == Unit.Faction.ENEMY:
-		overrides = enemy_unit_stats
-	if spawn_index < 0 or spawn_index >= overrides.size():
-		return null
-	return overrides[spawn_index]
+		overrides = enemy_unit_definitions
+	if spawn_index >= 0 and spawn_index < overrides.size() and overrides[spawn_index] != null:
+		return overrides[spawn_index]
+	if default_unit_definition != null:
+		return default_unit_definition
+	return UnitDefinitionScript.new() as UnitStats
 
-func _add_unit(faction: Unit.Faction, cell: Vector2i, tex: Texture2D, stats_override: UnitStats = null) -> void:
+func _add_unit(faction: Unit.Faction, cell: Vector2i, tex: Texture2D, definition: UnitStats = null) -> void:
 	var u: Unit = unit_scene.instantiate()
 	u.faction = faction
 	var auto_name: String = "Ally %d" % [player_units.size() + 1]
@@ -171,30 +168,13 @@ func _add_unit(faction: Unit.Faction, cell: Vector2i, tex: Texture2D, stats_over
 		auto_name = "Enemy %d" % [enemy_units.size() + 1]
 	if u.unit_name.strip_edges() == "":
 		u.set_display_name(auto_name)
-	if stats_override != null:
-		u.set_stats(
-			stats_override.health,
-			stats_override.strength,
-			stats_override.speed,
-			stats_override.precision,
-			stats_override.intellect,
-			stats_override.armor,
-			true
-		)
-		if stats_override.display_name.strip_edges() != "":
-			u.set_display_name(stats_override.display_name)
-	else:
-		u.set_stats(
-			default_unit_health,
-			default_unit_strength,
-			default_unit_speed,
-			default_unit_precision,
-			default_unit_intellect,
-			default_unit_armor,
-			true
-		)
+	if definition != null:
+		u.apply_definition(definition, true)
+		if definition.display_name.strip_edges() == "":
+			u.set_display_name(auto_name)
 	u.set_tile_size(board.tile_set.tile_size)
-	u.set_texture(tex)
+	if definition == null or definition.texture == null:
+		u.set_texture(tex)
 	u.clicked.connect(_on_unit_clicked)
 
 	var world_parent: Node = board

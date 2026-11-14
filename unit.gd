@@ -71,6 +71,28 @@ func set_stats(health_value: int, strength_value: int, speed_value: int, precisi
 		current_hp = clampi(current_hp, 0, health)
 	queue_redraw()
 
+func apply_definition(definition: UnitStats, reset_current_hp: bool = true) -> void:
+	if definition == null:
+		return
+	set_display_name(definition.display_name)
+	set_stats(
+		definition.health,
+		definition.strength,
+		definition.speed,
+		definition.precision,
+		definition.intellect,
+		definition.armor,
+		reset_current_hp
+	)
+	move_range = maxi(0, definition.move_range)
+	attack_range = maxi(1, definition.attack_range)
+	blocks_allies = definition.blocks_allies
+	blocks_enemies = definition.blocks_enemies
+	attack_lunge_time = maxf(0.0, definition.attack_lunge_time)
+	attack_return_time = maxf(0.0, definition.attack_return_time)
+	if definition.texture != null:
+		set_texture(definition.texture)
+
 func set_display_name(new_name: String) -> void:
 	unit_name = new_name.strip_edges()
 
