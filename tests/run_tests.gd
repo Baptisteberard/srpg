@@ -113,6 +113,13 @@ func _test_combat_basics() -> void:
 
 	_expect(attacker.can_attack(defender), "Opposing adjacent units can attack")
 	_expect(attacker.get_hit_chance_against(defender) == 60, "Hit chance uses precision minus target speed")
+	var forecast: Dictionary = CombatResolver.forecast(attacker, defender, attacker.cell)
+	_expect(
+		not bool(forecast["attacker_strikes_first"]) \
+		and int(forecast["attacker_hp_after"]) == 12 \
+		and int(forecast["defender_hp_after"]) == 8,
+		"Combat forecast follows initiative and includes counterattack damage"
+	)
 	var damage: int = defender.take_damage(attacker.get_physical_damage())
 	_expect(damage == 12 and defender.current_hp == 8, "A successful strike applies physical damage")
 

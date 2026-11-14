@@ -20,3 +20,13 @@ func _enter_tree() -> void:
 	manager.default_unit_definition = default_unit_definition
 	manager.player_unit_definitions = player_unit_definitions
 	manager.enemy_unit_definitions = enemy_unit_definitions
+
+
+func _ready() -> void:
+	var hud: BattleHud = get_node_or_null("UI") as BattleHud
+	var hp_overlay: UnitHpOverlay = get_node_or_null("HpOverlay") as UnitHpOverlay
+	if hud == null or hp_overlay == null:
+		push_error("BattleRuntime: HUD or HP overlay child is missing.")
+		return
+	if not hud.damage_preview_changed.is_connected(hp_overlay.set_damage_previews):
+		hud.damage_preview_changed.connect(hp_overlay.set_damage_previews)

@@ -17,11 +17,11 @@ highlights, HP overlay, HUD, unit scene, and battle controller.
 | `BattleRuntime` | Shared battle-scene composition and encounter configuration |
 | `TurnManager` | Turn orchestration, player commands, selection, and occupancy |
 | `GridNavigator` | Reachability and shortest-path calculations |
-| `CombatResolver` | Strike order, hit rolls, damage, counters, and defeat events |
+| `CombatResolver` | Shared combat forecast, strike order, hit rolls, damage, counters, and defeat events |
 | `EnemyAI` | Enemy movement decisions; currently chooses a random reachable cell |
 | `BattleHud` | Unit details, combat preview, phase label, and End Turn interface |
 | `HighlightMap` | Movement, attack, hover, and path-preview drawing |
-| `UnitHpOverlay` | Event-driven world-space HP bars |
+| `UnitHpOverlay` | Event-driven world-space HP bars and pulsing predicted-damage segments |
 | `Unit` | Runtime unit state, input, and movement/attack animation |
 | `UnitDefinition` | Reusable unit stats, movement/combat rules, and optional texture |
 
@@ -54,5 +54,5 @@ godot --headless --path . --script res://tests/run_tests.gd
 ```
 
 It checks that both maps load and spawn correctly, grid destinations obey the
-movement rules, awaited movement updates occupancy, and core combat math is
-stable.
+movement rules, awaited movement updates occupancy, and combat forecasts and
+damage math are stable.

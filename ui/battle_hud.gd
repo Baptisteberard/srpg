@@ -1,6 +1,8 @@
 extends CanvasLayer
 class_name BattleHud
 
+signal damage_preview_changed(damage_by_unit: Dictionary)
+
 var focused_unit: Unit
 var preview_attacker: Unit
 var preview_defender: Unit
@@ -31,6 +33,7 @@ func show_combat_preview(attacker: Unit, defender: Unit, attacker_cell: Vector2i
 	preview_defender = defender
 	preview_attacker_cell = attacker_cell
 	if changed:
+		_emit_damage_preview()
 		refresh()
 
 
@@ -40,6 +43,7 @@ func clear_combat_preview() -> void:
 	preview_attacker = null
 	preview_defender = null
 	preview_attacker_cell = Vector2i.ZERO
+	damage_preview_changed.emit({})
 	refresh()
 
 
@@ -50,7 +54,21 @@ func forget_unit(unit: Unit) -> void:
 		preview_attacker = null
 		preview_defender = null
 		preview_attacker_cell = Vector2i.ZERO
+		damage_preview_changed.emit({})
 	refresh()
+
+
+func _emit_damage_preview() -> void:
+	var damage_by_unit: Dictionary = {}
+	var forecast: Dictionary = CombatResolver.forecast(preview_attacker, preview_defender, preview_attacker_cell)
+	if bool(forecast.get("can_attack", false)):
+		var attacker_damage: int = preview_attacker.current_hp - int(forecast["attacker_hp_after"])
+		var defender_damage: int = preview_defender.current_hp - int(forecast["defender_hp_after"])
+		if attacker_damage > 0:
+			damage_by_unit[preview_attacker] = attacker_damage
+		if defender_damage > 0:
+			damage_by_unit[preview_defender] = defender_damage
+	damage_preview_changed.emit(damage_by_unit)
 
 
 func refresh() -> void:
@@ -202,31 +220,17 @@ func _build_default_unit_stats_text(unit: Unit) -> String:
 
 
 func _build_combat_preview_text(attacker: Unit, defender: Unit, attacker_cell: Vector2i) -> String:
-	var attacker_can: bool = _can_attack_from_cell(attacker, attacker_cell, defender.cell)
-	var defender_can: bool = _can_attack_from_cell(defender, defender.cell, attacker_cell)
-	if not attacker_can:
+	var forecast: Dictionary = CombatResolver.forecast(attacker, defender, attacker_cell)
+	if not bool(forecast.get("can_attack", false)):
 		return "Combat Preview\nCannot attack from current position."
 
 	var attacker_hit: int = attacker.get_hit_chance_against(defender)
 	var defender_hit: int = defender.get_hit_chance_against(attacker)
 	var attacker_damage: int = attacker.get_physical_damage()
 	var defender_damage: int = defender.get_physical_damage()
-	var attacker_hp_after: int = attacker.current_hp
-	var defender_hp_after: int = defender.current_hp
-	var first_striker: String = "Attacker"
-	var attacker_strikes_first: bool = true
-
-	if defender.speed > attacker.speed and defender_can:
-		first_striker = "Defender"
-		attacker_strikes_first = false
-	if attacker_strikes_first:
-		defender_hp_after = maxi(0, defender_hp_after - attacker_damage)
-		if defender_hp_after > 0 and defender_can:
-			attacker_hp_after = maxi(0, attacker_hp_after - defender_damage)
-	else:
-		attacker_hp_after = maxi(0, attacker_hp_after - defender_damage)
-		if attacker_hp_after > 0:
-			defender_hp_after = maxi(0, defender_hp_after - attacker_damage)
+	var attacker_hp_after: int = int(forecast["attacker_hp_after"])
+	var defender_hp_after: int = int(forecast["defender_hp_after"])
+	var first_striker: String = "Attacker" if bool(forecast["attacker_strikes_first"]) else "Defender"
 
 	return "Combat Preview\nFirst strike: %s\n\nAttacker (%s)\nHP: %d/%d\nStrength: %d\nSpeed: %d\nPrecision: %d\nHit: %d%%\nDamage: %d\nHP After (if hits): %d\n\nDefender (%s)\nHP: %d/%d\nStrength: %d\nSpeed: %d\nPrecision: %d\nHit: %d%%\nDamage: %d\nHP After (if hits): %d" % [
 		first_striker,
@@ -249,13 +253,6 @@ func _build_combat_preview_text(attacker: Unit, defender: Unit, attacker_cell: V
 		defender_damage,
 		defender_hp_after,
 	]
-
-
-func _can_attack_from_cell(attacker: Unit, attacker_cell: Vector2i, defender_cell: Vector2i) -> bool:
-	return attacker != null \
-		and attacker.is_alive() \
-		and abs(attacker_cell.x - defender_cell.x) + abs(attacker_cell.y - defender_cell.y) <= attacker.attack_range
-
 
 func _faction_label(unit: Unit) -> String:
 	return "Enemy" if unit != null and unit.faction == Unit.Faction.ENEMY else "Player"
