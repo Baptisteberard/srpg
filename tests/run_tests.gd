@@ -16,6 +16,7 @@ func _run() -> void:
 	await _test_battle_scene("res://game_map2.tscn", 2, 2)
 	await _test_reachable_cells()
 	_test_combat_basics()
+	await _test_hp_damage_effects()
 
 	if failures.is_empty():
 		print("PASS: %d SRPG checks" % checks_run)
@@ -125,6 +126,25 @@ func _test_combat_basics() -> void:
 
 	attacker.free()
 	defender.free()
+
+
+func _test_hp_damage_effects() -> void:
+	var overlay: UnitHpOverlay = UnitHpOverlay.new()
+	root.add_child(overlay)
+	var packed: PackedScene = load("res://unit.tscn") as PackedScene
+	var unit: Unit = packed.instantiate() as Unit
+	unit.set_stats(20, 5, 5, 100, 0, 0)
+	root.add_child(unit)
+	await process_frame
+
+	unit.take_damage(5)
+	_expect(overlay._damage_trails.has(unit), "Taking damage starts a delayed white HP trail")
+	unit.take_damage(15)
+	_expect(not overlay._death_effects.is_empty(), "Lethal damage preserves a fading death-bar effect")
+
+	unit.queue_free()
+	overlay.queue_free()
+	await process_frame
 
 
 func _expect(condition: bool, description: String) -> void:

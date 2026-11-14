@@ -21,7 +21,7 @@ highlights, HP overlay, HUD, unit scene, and battle controller.
 | `EnemyAI` | Enemy movement decisions; currently chooses a random reachable cell |
 | `BattleHud` | Unit details, combat preview, phase label, and End Turn interface |
 | `HighlightMap` | Movement, attack, hover, and path-preview drawing |
-| `UnitHpOverlay` | Event-driven world-space HP bars and pulsing predicted-damage segments |
+| `UnitHpOverlay` | Event-driven HP bars, forecast pulses, delayed damage trails, and death fades |
 | `Unit` | Runtime unit state, input, and movement/attack animation |
 | `UnitDefinition` | Reusable unit stats, movement/combat rules, and optional texture |
 
