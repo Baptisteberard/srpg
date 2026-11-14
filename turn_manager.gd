@@ -570,11 +570,15 @@ func _remove_unit(u: Unit) -> void:
 	if hud != null:
 		hud.forget_unit(u)
 
-	if is_instance_valid(u):
-		u.queue_free()
-
 	_update_selection()
 	_refresh_stats_panel()
+
+	# The unit stops participating immediately, but remains visible long enough
+	# for its death fade to finish before the node is freed.
+	if is_instance_valid(u):
+		await u.play_death_fade()
+	if is_instance_valid(u):
+		u.queue_free()
 
 func _attackable_enemy_cells(attacker: Unit) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []

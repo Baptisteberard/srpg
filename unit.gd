@@ -25,6 +25,7 @@ enum Faction { PLAYER, ENEMY }
 @export var attack_range: int = 1
 @export var attack_lunge_time: float = 0.08
 @export var attack_return_time: float = 0.12
+@export_range(0.05, 2.0, 0.01) var death_fade_time: float = 0.45
 
 @export var blocks_allies: bool = false   # allies can pass through by default
 @export var blocks_enemies: bool = true  # enemies cannot pass through by default
@@ -175,6 +176,18 @@ func play_attack_animation(target_world_pos: Vector2) -> void:
 	is_visually_moving = false
 	position_changed.emit(self)
 	visual_motion_finished.emit(self)
+
+
+func play_death_fade(duration_override: float = -1.0) -> void:
+	input_pickable = false
+	monitoring = false
+	monitorable = false
+	var duration: float = death_fade_time if duration_override < 0.0 else duration_override
+	duration = maxf(duration, 0.01)
+	var tween: Tween = create_tween()
+	tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.tween_property(self, "modulate:a", 0.0, duration)
+	await tween.finished
 
 func set_cell(new_cell: Vector2i, world_pos: Vector2) -> void:
 	cell = new_cell

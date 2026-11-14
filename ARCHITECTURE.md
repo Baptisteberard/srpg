@@ -22,7 +22,7 @@ highlights, HP overlay, HUD, unit scene, and battle controller.
 | `BattleHud` | Unit details, combat preview, phase label, and End Turn interface |
 | `HighlightMap` | Movement, attack, hover, and path-preview drawing |
 | `UnitHpOverlay` | Event-driven HP bars, forecast pulses, delayed damage trails, and death fades |
-| `Unit` | Runtime unit state, input, and movement/attack animation |
+| `Unit` | Runtime unit state, input, movement/attack animation, and defeat fade |
 | `UnitDefinition` | Reusable unit stats, movement/combat rules, and optional texture |
 
 ## Battle state

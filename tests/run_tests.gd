@@ -141,6 +141,11 @@ func _test_hp_damage_effects() -> void:
 	_expect(overlay._damage_trails.has(unit), "Taking damage starts a delayed white HP trail")
 	unit.take_damage(15)
 	_expect(not overlay._death_effects.is_empty(), "Lethal damage preserves a fading death-bar effect")
+	await unit.play_death_fade(0.01)
+	_expect(
+		is_zero_approx(unit.modulate.a) and not unit.input_pickable,
+		"A defeated unit fades out and stops accepting input before removal"
+	)
 
 	unit.queue_free()
 	overlay.queue_free()
