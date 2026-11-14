@@ -1,8 +1,8 @@
 [gd_scene format=4 uid="uid://bw30oe3epo7yb"]
 
 [ext_resource type="Script" uid="uid://3g8uuu5qjoi2" path="res://board.gd" id="1_e2o6t"]
-[ext_resource type="Texture2D" uid="uid://dtt5t876b7jo8" path="res://tiles/tileset_grass.png" id="1_ryrav"]
-[ext_resource type="Texture2D" uid="uid://bjmv5h6q16jte" path="res://tiles/elaborated_stone.png" id="2_3n5cy"]
+[ext_resource type="Texture2D" uid="uid://c2nnmf8rdowqd" path="res://tiles/Tileset.png" id="1_ryrav"]
+[ext_resource type="Texture2D" uid="uid://xbhh11ox62tt" path="res://tiles/Tileset_trees.png" id="2_3n5cy"]
 [ext_resource type="Script" uid="uid://bk8drm3y8kopc" path="res://highlight.gd" id="2_fc0e3"]
 [ext_resource type="Script" uid="uid://dxcbw5s07eqfi" path="res://turn_manager.gd" id="2_feb5d"]
 [ext_resource type="PackedScene" uid="uid://cxtorhlqusp6i" path="res://unit.tscn" id="3_feb5d"]
