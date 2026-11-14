@@ -39,7 +39,7 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 	await process_frame
 
 	var board: Board = battle.get_node_or_null("Board") as Board
-	var manager: TurnManager = battle.get_node_or_null("TurnManager") as TurnManager
+	var manager: TurnManager = battle.find_child("TurnManager", true, false) as TurnManager
 	_expect(board != null and not board.get_used_cells().is_empty(), "%s has a populated board" % scene_path)
 	_expect(manager != null, "%s has a TurnManager" % scene_path)
 	if manager != null:
@@ -60,7 +60,7 @@ func _test_reachable_cells() -> void:
 	root.add_child(battle)
 	await process_frame
 
-	var manager: TurnManager = battle.get_node("TurnManager") as TurnManager
+	var manager: TurnManager = battle.find_child("TurnManager", true, false) as TurnManager
 	var mover: Unit = manager.player_units[0]
 	var reach: Dictionary = manager._reachable_destinations_for(mover)
 	var bfs: Dictionary = manager._bfs_from(mover)

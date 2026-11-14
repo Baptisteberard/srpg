@@ -3,12 +3,7 @@
 [ext_resource type="Script" uid="uid://3g8uuu5qjoi2" path="res://board.gd" id="1_e2o6t"]
 [ext_resource type="Texture2D" uid="uid://c2nnmf8rdowqd" path="res://tiles/Tileset.png" id="1_eow3j"]
 [ext_resource type="Texture2D" uid="uid://xbhh11ox62tt" path="res://tiles/Tileset_trees.png" id="1_j5wjh"]
-[ext_resource type="Script" uid="uid://bk8drm3y8kopc" path="res://highlight.gd" id="2_fc0e3"]
-[ext_resource type="Script" uid="uid://dxcbw5s07eqfi" path="res://turn_manager.gd" id="2_feb5d"]
-[ext_resource type="PackedScene" uid="uid://cxtorhlqusp6i" path="res://unit.tscn" id="3_feb5d"]
-[ext_resource type="Script" uid="uid://bshrn52lasrtk" path="res://camera_controller.gd" id="4_cam"]
-[ext_resource type="Script" uid="uid://bkbluae6wer1g" path="res://coord_overlay.gd" id="5_coord"]
-[ext_resource type="Script" uid="uid://ff32cnlkndtm" path="res://unit_hp_overlay.gd" id="6_hpovl"]
+[ext_resource type="PackedScene" path="res://battle/battle_runtime.tscn" id="2_runtime"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_vef74"]
 texture = ExtResource("1_j5wjh")
@@ -104,45 +99,4 @@ y_sort_origin = 8
 collision_enabled = false
 navigation_visibility_mode = 1
 
-[node name="Highlight" type="Node2D" parent="." unique_id=999458790]
-z_index = 1
-script = ExtResource("2_fc0e3")
-attack_fill_color = Color(1, 0.19999999, 0.19999999, 0.49019608)
-attack_border_color = Color(1, 0.19999999, 0.19999999, 1)
-
-[node name="Camera2D" type="Camera2D" parent="." unique_id=1996510111]
-script = ExtResource("4_cam")
-board_path = NodePath("../Board")
-
-[node name="CoordOverlay" type="Node2D" parent="." unique_id=777563091]
-z_index = 20
-script = ExtResource("5_coord")
-board_path = NodePath("../Board")
-
-[node name="HpOverlay" type="Node2D" parent="." unique_id=376764420]
-script = ExtResource("6_hpovl")
-
-[node name="UI" type="CanvasLayer" parent="." unique_id=2114992824]
-
-[node name="PhaseLabel" type="Label" parent="UI" unique_id=143802991]
-offset_right = 40.0
-offset_bottom = 23.0
-
-[node name="EndTurnButton" type="Button" parent="UI" unique_id=719138984]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -140.0
-offset_top = 40.0
-offset_right = -90.0
-offset_bottom = 90.0
-grow_horizontal = 0
-text = "End Turn"
-
-[node name="TurnManager" type="Node" parent="." unique_id=1552275210]
-script = ExtResource("2_feb5d")
-board_path = NodePath("../Board")
-phase_label_path = NodePath("../UI/PhaseLabel")
-end_turn_button_path = NodePath("../UI/EndTurnButton")
-unit_scene = ExtResource("3_feb5d")
-highlight_path = NodePath("../Highlight")
+[node name="BattleRuntime" parent="." instance=ExtResource("2_runtime")]

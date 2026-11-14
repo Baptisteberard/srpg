@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://battle/battle_runtime.gd" id="1_runtime"]
+[ext_resource type="Script" path="res://highlight.gd" id="2_highlight"]
+[ext_resource type="Script" path="res://camera_controller.gd" id="3_camera"]
+[ext_resource type="Script" path="res://coord_overlay.gd" id="4_coord"]
+[ext_resource type="Script" path="res://unit_hp_overlay.gd" id="5_hp"]
+[ext_resource type="Script" path="res://turn_manager.gd" id="6_turns"]
+[ext_resource type="PackedScene" path="res://unit.tscn" id="7_unit"]
+
+[node name="BattleRuntime" type="Node"]
+script = ExtResource("1_runtime")
+
+[node name="Highlight" type="Node2D" parent="."]
+z_index = 1
+script = ExtResource("2_highlight")
+board_path = NodePath("../../Board")
+attack_fill_color = Color(1, 0.19999999, 0.19999999, 0.49019608)
+attack_border_color = Color(1, 0.19999999, 0.19999999, 1)
+
+[node name="Camera2D" type="Camera2D" parent="."]
+script = ExtResource("3_camera")
+board_path = NodePath("../../Board")
+
+[node name="CoordOverlay" type="Node2D" parent="."]
+z_index = 20
+script = ExtResource("4_coord")
+board_path = NodePath("../../Board")
+
+[node name="HpOverlay" type="Node2D" parent="."]
+script = ExtResource("5_hp")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="PhaseLabel" type="Label" parent="UI"]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="EndTurnButton" type="Button" parent="UI"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -140.0
+offset_top = 40.0
+offset_right = -90.0
+offset_bottom = 90.0
+grow_horizontal = 0
+text = "End Turn"
+
+[node name="TurnManager" type="Node" parent="."]
+script = ExtResource("6_turns")
+board_path = NodePath("../../Board")
+phase_label_path = NodePath("../UI/PhaseLabel")
+end_turn_button_path = NodePath("../UI/EndTurnButton")
+unit_scene = ExtResource("7_unit")
+highlight_path = NodePath("../Highlight")
