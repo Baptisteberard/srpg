@@ -1,0 +1,58 @@
+# SRPG Architecture
+
+## Scene flow
+
+`main.tscn` owns the map-selection menu and instantiates the chosen map under
+`GameRoot`.
+
+Each map scene owns only map-specific terrain and encounter settings. Both maps
+instantiate `battle/battle_runtime.tscn`, which provides the shared camera,
+highlights, HP overlay, HUD, unit scene, and battle controller.
+
+## Runtime responsibilities
+
+| Component | Responsibility |
+| --- | --- |
+| `Board` | Tile bounds, blocked terrain, coordinate conversion, and cell clicks |
+| `BattleRuntime` | Shared battle-scene composition and encounter configuration |
+| `TurnManager` | Turn orchestration, player commands, selection, and occupancy |
+| `GridNavigator` | Reachability and shortest-path calculations |
+| `CombatResolver` | Strike order, hit rolls, damage, counters, and defeat events |
+| `EnemyAI` | Enemy movement decisions; currently chooses a random reachable cell |
+| `BattleHud` | Unit details, combat preview, phase label, and End Turn interface |
+| `HighlightMap` | Movement, attack, hover, and path-preview drawing |
+| `UnitHpOverlay` | Event-driven world-space HP bars |
+| `Unit` | Runtime unit state, input, and movement/attack animation |
+| `UnitDefinition` | Reusable unit stats, movement/combat rules, and optional texture |
+
+## Battle state
+
+`TurnManager` separates the active faction (`PLAYER` or `ENEMY`) from the
+current action state (`IDLE`, `MOVING`, `COMBAT`, or `ENEMY_TURN`). Movement and
+combat animations are awaited, so each action completes before the next state
+transition.
+
+The occupancy dictionary remains the authoritative mapping from board cells to
+runtime units. `GridNavigator` receives the same dictionary by reference.
+
+## Unit data
+
+Create `UnitDefinition` resources for reusable unit archetypes. Definitions
+contain base stats, move and attack ranges, blocking rules, animation timing,
+and an optional texture. Current HP, cell position, faction, and action state
+remain on the runtime `Unit`.
+
+`UnitStats` remains as a compatibility base for resources made before the
+architecture update.
+
+## Tests
+
+The project intentionally uses one small, dependency-free headless test runner:
+
+```powershell
+godot --headless --path . --script res://tests/run_tests.gd
+```
+
+It checks that both maps load and spawn correctly, grid destinations obey the
+movement rules, awaited movement updates occupancy, and core combat math is
+stable.

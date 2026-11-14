@@ -14,11 +14,60 @@ func _ready() -> void:
 	# Keep HP bars above board, units, trees and hover highlights.
 	z_as_relative = false
 	z_index = 100
-	set_process(true)
+	get_tree().node_added.connect(_on_node_added)
+	get_tree().node_removed.connect(_on_node_removed)
+	for node in get_tree().get_nodes_in_group("units"):
+		_track_unit(node as Unit)
+	set_process(false)
 	queue_redraw()
 
 func _process(_delta: float) -> void:
 	queue_redraw()
+	if not _has_active_motion():
+		set_process(false)
+
+func _on_node_added(node: Node) -> void:
+	if node is Unit:
+		_track_unit(node as Unit)
+
+func _on_node_removed(node: Node) -> void:
+	if node is Unit:
+		queue_redraw()
+
+func _track_unit(unit: Unit) -> void:
+	if unit == null:
+		return
+	if not unit.health_changed.is_connected(_on_unit_changed):
+		unit.health_changed.connect(_on_unit_changed)
+	if not unit.position_changed.is_connected(_on_unit_changed):
+		unit.position_changed.connect(_on_unit_changed)
+	if not unit.visual_motion_started.is_connected(_on_unit_motion_started):
+		unit.visual_motion_started.connect(_on_unit_motion_started)
+	if not unit.visual_motion_finished.is_connected(_on_unit_motion_finished):
+		unit.visual_motion_finished.connect(_on_unit_motion_finished)
+	queue_redraw()
+
+func _on_unit_changed(_unit: Unit) -> void:
+	queue_redraw()
+
+func _on_unit_motion_started(_unit: Unit) -> void:
+	set_process(true)
+	queue_redraw()
+
+func _on_unit_motion_finished(_unit: Unit) -> void:
+	queue_redraw()
+	call_deferred("_stop_processing_if_idle")
+
+func _stop_processing_if_idle() -> void:
+	if not _has_active_motion():
+		set_process(false)
+
+func _has_active_motion() -> bool:
+	for node in get_tree().get_nodes_in_group("units"):
+		var unit: Unit = node as Unit
+		if unit != null and unit.is_visually_moving:
+			return true
+	return false
 
 func _draw() -> void:
 	var nodes: Array[Node] = get_tree().get_nodes_in_group("units")

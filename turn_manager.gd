@@ -5,6 +5,8 @@ class_name TurnManager
 const GridNavigatorScript = preload("res://battle/grid_navigator.gd")
 const UnitDefinitionScript = preload("res://units/unit_definition.gd")
 const BattleHudScript = preload("res://ui/battle_hud.gd")
+const CombatResolverScript = preload("res://battle/combat_resolver.gd")
+const EnemyAIScript = preload("res://battle/enemy_ai.gd")
 
 enum Phase { PLAYER, ENEMY }
 enum ActionState { IDLE, MOVING, COMBAT, ENEMY_TURN }
@@ -49,12 +51,18 @@ var cursor_follow_steps: Array[Vector2i] = []
 var occ: Dictionary = {} # Dictionary[Vector2i, Unit]
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var grid_navigator = GridNavigatorScript.new()
+var combat_resolver = CombatResolverScript.new()
+var enemy_ai = EnemyAIScript.new()
 
 @export var highlight_path: NodePath
 var highlight: HighlightMap
 
 func _ready() -> void:
 	rng.randomize()
+	combat_resolver.configure(rng)
+	enemy_ai.configure(rng)
+	combat_resolver.unit_defeated.connect(_remove_unit)
+	combat_resolver.combat_state_changed.connect(_refresh_stats_panel)
 
 	board = get_node_or_null(board_path) as Board
 	if board == null:
@@ -343,16 +351,10 @@ func _run_enemy_phase() -> void:
 			await _resolve_attack(enemy, target)
 			continue
 
-		var reach: Dictionary = _reachable_destinations_for(enemy)
-		var options: Array[Vector2i] = reach["dests"]
-		if options.is_empty():
+		var move_choice: Dictionary = enemy_ai.choose_move(enemy, grid_navigator)
+		if move_choice.is_empty():
 			continue
-
-		var destination: Vector2i = options[rng.randi_range(0, options.size() - 1)]
-		var path: Array[Vector2i] = _shortest_path_with_turn_bias(enemy, enemy.cell, destination)
-		if path.is_empty():
-			path = _reconstruct_path(reach["prev"], enemy.cell, destination)
-		await _move_unit(enemy, path)
+		await _move_unit(enemy, move_choice["path"])
 
 		if is_instance_valid(enemy) and enemy.is_alive():
 			target = _pick_adjacent_opponent(enemy)
@@ -553,45 +555,7 @@ func _pick_adjacent_opponent(attacker: Unit) -> Unit:
 	return null
 
 func _resolve_attack(attacker: Unit, defender: Unit) -> void:
-	if attacker == null or defender == null:
-		return
-	if not attacker.can_attack(defender):
-		return
-
-	var first: Unit = attacker
-	var second: Unit = defender
-	if defender.speed > attacker.speed and defender.can_attack(attacker):
-		first = defender
-		second = attacker
-
-	await _perform_attack_strike(first, second)
-	if not is_instance_valid(first) or not is_instance_valid(second):
-		return
-	if not first.is_alive() or not second.is_alive():
-		return
-	if not second.can_attack(first):
-		_refresh_stats_panel()
-		return
-	await _perform_attack_strike(second, first)
-
-func _perform_attack_strike(attacker: Unit, defender: Unit) -> void:
-	if attacker == null or defender == null:
-		return
-	if not attacker.can_attack(defender):
-		return
-
-	await attacker.play_attack_animation(defender.global_position)
-	if not is_instance_valid(attacker) or not is_instance_valid(defender):
-		return
-
-	var hit_chance: int = attacker.get_hit_chance_against(defender)
-	var roll: int = rng.randi_range(1, 100)
-	if roll <= hit_chance:
-		defender.take_damage(attacker.get_physical_damage())
-		if not defender.is_alive():
-			_remove_unit(defender)
-
-	_refresh_stats_panel()
+	await combat_resolver.resolve(attacker, defender)
 
 func _remove_unit(u: Unit) -> void:
 	if u == null:

@@ -4,6 +4,10 @@ class_name Unit
 
 signal clicked(unit: Unit)
 signal move_finished(unit: Unit)
+signal health_changed(unit: Unit)
+signal position_changed(unit: Unit)
+signal visual_motion_started(unit: Unit)
+signal visual_motion_finished(unit: Unit)
 
 enum Faction { PLAYER, ENEMY }
 
@@ -38,6 +42,7 @@ func blocks_movement_for(mover_faction: Faction) -> bool:
 var cell: Vector2i = Vector2i.ZERO
 var has_acted: bool = false
 var is_moving: bool = false
+var is_visually_moving: bool = false
 
 var sprite: Sprite2D = null
 
@@ -70,6 +75,7 @@ func set_stats(health_value: int, strength_value: int, speed_value: int, precisi
 	else:
 		current_hp = clampi(current_hp, 0, health)
 	queue_redraw()
+	health_changed.emit(self)
 
 func apply_definition(definition: UnitStats, reset_current_hp: bool = true) -> void:
 	if definition == null:
@@ -142,6 +148,7 @@ func take_damage(amount: int) -> int:
 	var dmg: int = mini(amount, current_hp)
 	current_hp -= dmg
 	queue_redraw()
+	health_changed.emit(self)
 	return dmg
 
 func play_attack_animation(target_world_pos: Vector2) -> void:
@@ -156,6 +163,8 @@ func play_attack_animation(target_world_pos: Vector2) -> void:
 	var lunge_distance: float = min(distance * 0.55, max_lunge)
 	var hit_pos: Vector2 = start_pos + dir * lunge_distance
 
+	is_visually_moving = true
+	visual_motion_started.emit(self)
 	var tw: Tween = create_tween()
 	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.tween_property(self, "global_position", hit_pos, attack_lunge_time)
@@ -163,10 +172,14 @@ func play_attack_animation(target_world_pos: Vector2) -> void:
 	tw.tween_property(self, "global_position", start_pos, attack_return_time)
 	await tw.finished
 	global_position = start_pos
+	is_visually_moving = false
+	position_changed.emit(self)
+	visual_motion_finished.emit(self)
 
 func set_cell(new_cell: Vector2i, world_pos: Vector2) -> void:
 	cell = new_cell
 	global_position = world_pos
+	position_changed.emit(self)
 
 func set_selected(selected: bool) -> void:
 	_get_sprite().scale = Vector2(1.15, 1.15) if selected else Vector2.ONE
@@ -206,10 +219,15 @@ func move_along(path: Array[Vector2i], board: Node, step_time: float = 0.12) -> 
 		return
 
 	is_moving = true
+	is_visually_moving = true
+	visual_motion_started.emit(self)
 	var tw := create_tween()
 	for c in path:
 		tw.tween_property(self, "global_position", board.cell_to_world(c), step_time)
 	await tw.finished
 	cell = path[path.size() - 1]
 	is_moving = false
+	is_visually_moving = false
+	position_changed.emit(self)
+	visual_motion_finished.emit(self)
 	move_finished.emit(self)

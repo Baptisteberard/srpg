@@ -33,17 +33,6 @@ func _ready() -> void:
 		_try_bind_board_from_path()
 	_sync_transform_from_board()
 	z_index = 1
-	set_process(true)
-	queue_redraw()
-
-func _process(_delta: float) -> void:
-	if board_ref == null:
-		_try_bind_board_from_path()
-	_sync_transform_from_board()
-
-	if _cells.is_empty() and _attack_cells.is_empty() and _preview_path.is_empty() and not _has_hover_cell:
-		return
-
 	queue_redraw()
 
 func configure_from_board(board: Board) -> void:
