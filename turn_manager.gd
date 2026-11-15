@@ -53,8 +53,8 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var grid_navigator = GridNavigatorScript.new()
 var combat_resolver = CombatResolverScript.new()
 var enemy_ai = EnemyAIScript.new()
-var unit_visual_size_multiplier: float = 1.0
-var unit_visual_vertical_offset: float = 0.0
+var unit_visual_size_multiplier: float = 0.75
+var unit_visual_vertical_offset: float = -24.0
 
 @export var highlight_path: NodePath
 var highlight: HighlightMap

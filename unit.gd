@@ -51,8 +51,8 @@ var sprite: AnimatedSprite2D = null
 var fe8_map_sprite_animation: FE8MapSpriteAnimation = null
 var is_selected_visual: bool = false
 var is_hovered_visual: bool = false
-var visual_size_multiplier: float = 1.0
-var visual_vertical_offset: float = 0.0
+var visual_size_multiplier: float = 0.75
+var visual_vertical_offset: float = -24.0
 
 func _ready() -> void:
 	add_to_group("units")

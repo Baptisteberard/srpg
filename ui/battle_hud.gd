@@ -17,14 +17,15 @@ var preview_attacker_cell: Vector2i = Vector2i.ZERO
 var stats_panel: PanelContainer
 var stats_scroll: ScrollContainer
 var stats_label: RichTextLabel
+var unit_visual_settings_toggle: Button
 var unit_visual_settings_panel: PanelContainer
 var unit_size_slider: HSlider
 var unit_size_value_label: Label
 var unit_vertical_offset_slider: HSlider
 var unit_vertical_offset_value_label: Label
 
-var unit_size_multiplier: float = 1.0
-var unit_vertical_offset: float = 0.0
+var unit_size_multiplier: float = 0.75
+var unit_vertical_offset: float = -24.0
 
 
 func _ready() -> void:
@@ -33,13 +34,24 @@ func _ready() -> void:
 
 
 func _build_unit_visual_settings_panel() -> void:
+	unit_visual_settings_toggle = Button.new()
+	unit_visual_settings_toggle.name = "UnitVisualSettingsToggle"
+	unit_visual_settings_toggle.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	unit_visual_settings_toggle.offset_left = -156.0
+	unit_visual_settings_toggle.offset_top = 16.0
+	unit_visual_settings_toggle.offset_right = -16.0
+	unit_visual_settings_toggle.offset_bottom = 52.0
+	unit_visual_settings_toggle.toggle_mode = true
+	unit_visual_settings_toggle.toggled.connect(_on_unit_visual_settings_toggled)
+	add_child(unit_visual_settings_toggle)
+
 	unit_visual_settings_panel = PanelContainer.new()
 	unit_visual_settings_panel.name = "UnitVisualSettingsPanel"
 	unit_visual_settings_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	unit_visual_settings_panel.offset_left = -316.0
-	unit_visual_settings_panel.offset_top = 16.0
+	unit_visual_settings_panel.offset_top = 60.0
 	unit_visual_settings_panel.offset_right = -16.0
-	unit_visual_settings_panel.offset_bottom = 154.0
+	unit_visual_settings_panel.offset_bottom = 198.0
 	add_child(unit_visual_settings_panel)
 
 	var margin := MarginContainer.new()
@@ -109,6 +121,20 @@ func _build_unit_visual_settings_panel() -> void:
 	reset_button.pressed.connect(_on_reset_unit_visual_settings)
 	rows.add_child(reset_button)
 	_refresh_unit_visual_settings_labels()
+	_set_unit_visual_menu_open(false)
+
+
+func _on_unit_visual_settings_toggled(is_open: bool) -> void:
+	_set_unit_visual_menu_open(is_open)
+
+
+func _set_unit_visual_menu_open(is_open: bool) -> void:
+	unit_visual_settings_panel.visible = is_open
+	unit_visual_settings_toggle.text = "Unit display ▲" if is_open else "Unit display ▼"
+	var end_turn_button := get_node_or_null("EndTurnButton") as Button
+	if end_turn_button != null:
+		end_turn_button.offset_top = 214.0 if is_open else 68.0
+		end_turn_button.offset_bottom = 260.0 if is_open else 114.0
 
 
 func _on_unit_size_changed(value: float) -> void:
@@ -124,8 +150,8 @@ func _on_unit_vertical_offset_changed(value: float) -> void:
 
 
 func _on_reset_unit_visual_settings() -> void:
-	unit_size_slider.value = 1.0
-	unit_vertical_offset_slider.value = 0.0
+	unit_size_slider.value = 0.75
+	unit_vertical_offset_slider.value = -24.0
 
 
 func _refresh_unit_visual_settings_labels() -> void:

@@ -42,6 +42,7 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 
 	var board: Board = battle.get_node_or_null("Board") as Board
 	var manager: TurnManager = battle.find_child("TurnManager", true, false) as TurnManager
+	var settings_toggle := battle.find_child("UnitVisualSettingsToggle", true, false) as Button
 	var settings_panel := battle.find_child("UnitVisualSettingsPanel", true, false) as PanelContainer
 	var size_slider := battle.find_child("UnitSizeSlider", true, false) as HSlider
 	var offset_slider := battle.find_child("UnitVerticalOffsetSlider", true, false) as HSlider
@@ -61,21 +62,42 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 			_expect(all_use_fe8_visuals, "%s uses FE8 map-sprite animations for every unit" % scene_path)
 
 	var visual_settings_work := false
-	if manager != null and settings_panel != null and size_slider != null and offset_slider != null:
+	if manager != null \
+	and settings_toggle != null \
+	and settings_panel != null \
+	and size_slider != null \
+	and offset_slider != null:
+		var defaults_work := is_equal_approx(manager.unit_visual_size_multiplier, 0.75) \
+			and is_equal_approx(manager.unit_visual_vertical_offset, -24.0)
+		var menu_starts_closed := not settings_panel.visible
+		settings_toggle.button_pressed = true
+		await process_frame
+		var menu_opens := settings_panel.visible
+		settings_toggle.button_pressed = false
+		await process_frame
+		var menu_closes := not settings_panel.visible
 		size_slider.value = 1.25
 		offset_slider.value = -12.0
 		await process_frame
 		var all_units: Array[Unit] = manager.player_units.duplicate()
 		all_units.append_array(manager.enemy_units)
-		visual_settings_work = not all_units.is_empty()
+		visual_settings_work = defaults_work \
+			and menu_starts_closed \
+			and menu_opens \
+			and menu_closes \
+			and not all_units.is_empty()
 		for unit in all_units:
 			if not is_equal_approx(unit.visual_size_multiplier, 1.25) \
 			or not is_equal_approx(unit._get_sprite().position.y, -12.0):
 				visual_settings_work = false
 				break
 	_expect(
-		settings_panel != null and size_slider != null and offset_slider != null and visual_settings_work,
-		"%s has working top-right unit display controls" % scene_path
+		settings_toggle != null \
+		and settings_panel != null \
+		and size_slider != null \
+		and offset_slider != null \
+		and visual_settings_work,
+		"%s has working collapsible top-right unit display controls" % scene_path
 	)
 
 	battle.queue_free()
