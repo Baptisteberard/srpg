@@ -29,6 +29,20 @@ coherent prototype baseline, not final balance.
 All formulas use integer values. Division rounds down unless a rule explicitly
 says otherwise. Percentage rolls use an inclusive `1–100` roll.
 
+`clamp(value, minimum, maximum)` limits a value so it cannot go below the
+minimum or above the maximum.
+
+Examples:
+
+```text
+clamp(-3, 0, 100) = 0
+clamp(45, 0, 100) = 45
+clamp(112, 0, 100) = 100
+```
+
+In plain language, `clamp(Critical Chance, 0, 100)` means that Critical Chance
+cannot be lower than `0%` or higher than `100%`.
+
 ## Characteristics
 
 | Characteristic | Primary effects |
