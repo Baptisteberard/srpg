@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://equipment/weapon_definition.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+display_name = "Mace"
+weapon_type = &"Mace"
+description = "A compact metal-headed striking weapon."
+damage = 6
+weight = 6
+minimum_range = 1
+maximum_range = 1

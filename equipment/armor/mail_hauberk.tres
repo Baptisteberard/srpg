@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ArmorDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://equipment/armor_definition.gd" id="1_armor"]
+
+[resource]
+script = ExtResource("1_armor")
+display_name = "Chainmail Hauberk"
+armor_type = &"Mail"
+description = "Interlinked iron or steel rings, commonly called chainmail."
+armor_value = 5
+weight = 7

@@ -26,7 +26,10 @@ highlights, HP overlay, HUD, unit scene, and battle controller.
 | `HighlightMap` | Movement, attack, hover, and path-preview drawing |
 | `UnitHpOverlay` | Event-driven HP bars, forecast pulses, delayed damage trails, and death fades |
 | `Unit` | Runtime unit state, level/EXP and personal growth rolls, input, movement/attack animation, and defeat fade |
-| `UnitDefinition` | Reusable unit stats, starting progression, personal growth rates, movement/combat rules, and optional texture |
+| `UnitDefinition` | Reusable unit stats, starting progression, personal growth rates, equipment loadout, movement/combat rules, and optional texture |
+| `WeaponDefinition` | Reusable weapon type, damage, weight, and range data |
+| `ArmorDefinition` | Reusable medieval armor type, protection, and weight data |
+| `EquipmentCatalog` | Shared catalog of prototype weapon and armor resources |
 | `FE8MapSpriteImporter` | Optional local extraction, transparency, and faction-palette conversion for the FE8 reference sheet |
 | `FE8MapSpriteAnimation` | Explicit FE8 dual-idle and four-direction movement animation data; right movement mirrors the side sequence |
 
@@ -43,9 +46,9 @@ runtime units. `GridNavigator` receives the same dictionary by reference.
 ## Unit data
 
 Create `UnitDefinition` resources for reusable unit archetypes. Definitions
-contain base stats, move and attack ranges, blocking rules, animation timing,
-and an optional texture. Current HP, cell position, faction, and action state
-remain on the runtime `Unit`.
+contain base stats, an equipment loadout, move and attack ranges, blocking
+rules, animation timing, and an optional texture. Current HP, cell position,
+faction, and action state remain on the runtime `Unit`.
 
 `UnitStats` remains as a compatibility base for resources made before the
 architecture update.

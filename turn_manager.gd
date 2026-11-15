@@ -641,12 +641,13 @@ func _attack_tiles_for_turn(attacker: Unit, include_move_range: bool) -> Array[V
 
 	var uniq: Dictionary = {}
 	var r: int = maxi(1, attacker.attack_range)
+	var minimum_range: int = maxi(1, attacker.minimum_attack_range)
 	for stand in stand_cells:
 		var base_cell: Vector2i = stand
 		for dx in range(-r, r + 1):
 			for dy in range(-r, r + 1):
 				var md: int = abs(dx) + abs(dy)
-				if md == 0 or md > r:
+				if md < minimum_range or md > r:
 					continue
 				var c: Vector2i = base_cell + Vector2i(dx, dy)
 				if not board.in_bounds(c):

@@ -246,6 +246,20 @@ Base Crit = 5
 Base Attack Speed = 50
 ```
 
+Current weapon catalog values:
+
+| Weapon | Type | Damage | Weight | Range |
+| --- | --- | ---: | ---: | ---: |
+| Basic Sword | Sword | 5 | 4 | 1 |
+| Basic Axe | Axe | 7 | 7 | 1 |
+| Basic Spear | Spear | 6 | 5 | 1–2 |
+| Mace | Mace | 6 | 6 | 1 |
+| Dagger | Dagger | 3 | 1 | 1 |
+| Longbow | Bow | 5 | 4 | 2–3 |
+| War Hammer | Hammer | 8 | 8 | 1 |
+
+Weights are abstract balance values, not kilograms.
+
 ### Armor data
 
 | Field | Purpose |
@@ -254,6 +268,20 @@ Base Attack Speed = 50
 | Armor value | Reduces physical and magical damage |
 | Weight | Contributes to Total Weight |
 | Requirements | Class tags and permanent characteristic minimums |
+
+Current medieval armor catalog values:
+
+| Armor | Type | Armor value | Weight |
+| --- | --- | ---: | ---: |
+| Padded Gambeson | Padded | 2 | 3 |
+| Chainmail Hauberk | Mail | 5 | 7 |
+| Lamellar Armor | Lamellar | 6 | 8 |
+| Coat of Plates | Plate Reinforced | 7 | 10 |
+| Brigandine | Brigandine | 8 | 10 |
+| Steel Plate Armor | Plate | 10 | 14 |
+
+These are historically grounded categories with game-tuned protection and
+weight values rather than literal historical measurements.
 
 ### Shield data
 
@@ -459,12 +487,13 @@ These values need playtesting before they become final:
 
 ## Current prototype gap
 
-The current code implements HP, Strength, Speed, Dexterity, Intellect, Armor,
-basic hit rolls, unit levels, kill EXP, five personal growth rates, random
-level-up rolls, EXP carry-over, and visible level-up results. It does not yet
-implement the formulas in this document for weight, equipment, Armor mitigation,
-critical hits, skills, class stat caps, class growth modifiers, or class
-eligibility and selection.
+The current code implements HP, Strength, Speed, Dexterity, Intellect, weapon and
+armor equipment, weapon damage, Armor mitigation for physical attacks, equipment
+weight, Weight Penalty, Battle Speed, weapon range, basic hit rolls, unit levels,
+kill EXP, five personal growth rates, random level-up rolls, EXP carry-over, and
+visible level-up results. It does not yet implement critical hits, magical
+attacks, healing, shields, equipment requirements, data-driven skills, class stat
+caps, class growth modifiers, or class eligibility and selection.
 
 The prototype currently also contains speed-based strike order and reciprocal
 attacks. Those are legacy prototype behaviors, not approved GDD rules.

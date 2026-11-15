@@ -30,6 +30,9 @@ const EXPERIENCE_PER_LEVEL: int = 100
 @export_range(0, 100, 1) var dexterity: int = 100
 @export var intellect: int = 0
 @export var armor: int = 0
+@export_group("Equipment")
+@export var equipped_weapon: WeaponDefinition
+@export var equipped_armor: ArmorDefinition
 @export_group("Growth Rates")
 @export_range(0, 300, 1) var health_growth_rate: int = 60
 @export_range(0, 300, 1) var strength_growth_rate: int = 40
@@ -37,6 +40,7 @@ const EXPERIENCE_PER_LEVEL: int = 100
 @export_range(0, 300, 1) var dexterity_growth_rate: int = 40
 @export_range(0, 300, 1) var intellect_growth_rate: int = 20
 @export_group("Combat")
+@export var minimum_attack_range: int = 1
 @export var attack_range: int = 1
 @export var attack_lunge_time: float = 0.08
 @export var attack_return_time: float = 0.12
@@ -132,7 +136,10 @@ func apply_definition(definition: UnitStats, reset_current_hp: bool = true) -> v
 		reset_current_hp
 	)
 	move_range = maxi(0, definition.move_range)
+	minimum_attack_range = maxi(1, definition.minimum_attack_range)
 	attack_range = maxi(1, definition.attack_range)
+	equip_weapon(definition.equipped_weapon)
+	equip_armor(definition.equipped_armor)
 	blocks_allies = definition.blocks_allies
 	blocks_enemies = definition.blocks_enemies
 	attack_lunge_time = maxf(0.0, definition.attack_lunge_time)
@@ -267,15 +274,55 @@ func can_attack(target: Unit) -> bool:
 		return false
 	if target.faction == faction:
 		return false
-	return abs(cell.x - target.cell.x) + abs(cell.y - target.cell.y) <= attack_range
+	return can_attack_from_cell(cell, target.cell)
+
+func can_attack_from_cell(attacker_cell: Vector2i, defender_cell: Vector2i) -> bool:
+	var distance: int = absi(attacker_cell.x - defender_cell.x) + absi(attacker_cell.y - defender_cell.y)
+	return distance >= minimum_attack_range and distance <= attack_range
+
+func equip_weapon(weapon: WeaponDefinition) -> void:
+	equipped_weapon = weapon
+	if equipped_weapon != null:
+		minimum_attack_range = equipped_weapon.get_safe_minimum_range()
+		attack_range = equipped_weapon.get_safe_maximum_range()
+
+func equip_armor(armor_definition: ArmorDefinition) -> void:
+	equipped_armor = armor_definition
+
+func get_weapon_damage() -> int:
+	return 0 if equipped_weapon == null else maxi(0, equipped_weapon.damage)
+
+func get_armor_value() -> int:
+	var equipment_armor := 0 if equipped_armor == null else maxi(0, equipped_armor.armor_value)
+	return maxi(0, armor + equipment_armor)
+
+func get_total_weight() -> int:
+	var weapon_weight := 0 if equipped_weapon == null else maxi(0, equipped_weapon.weight)
+	var armor_weight := 0 if equipped_armor == null else maxi(0, equipped_armor.weight)
+	return weapon_weight + armor_weight
+
+func get_weight_penalty() -> int:
+	return maxi(0, get_total_weight() - strength)
+
+func get_battle_speed() -> int:
+	return maxi(0, speed - get_weight_penalty())
+
+func get_evasion() -> int:
+	# Terrain Avoid will be added when terrain combat bonuses are implemented.
+	return get_battle_speed()
 
 func get_physical_damage() -> int:
-	return strength
+	return strength + get_weapon_damage()
+
+func get_physical_damage_against(target: Unit) -> int:
+	if target == null:
+		return 0
+	return maxi(0, get_physical_damage() - target.get_armor_value())
 
 func get_hit_chance_against(target: Unit) -> int:
 	if target == null:
 		return 0
-	return clampi(dexterity - target.speed, 0, 100)
+	return clampi(dexterity - target.get_evasion(), 0, 100)
 
 func take_damage(amount: int) -> int:
 	if amount <= 0 or not is_alive():

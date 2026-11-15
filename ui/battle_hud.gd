@@ -593,9 +593,43 @@ func _build_characteristics_text(unit: Unit) -> String:
 	]
 
 
-func _build_equipment_text(_unit: Unit) -> String:
-	return "[b]Weapon[/b]\nNone — prototype basic attack\n\n[b]Armor[/b]\nNone\n\n[b]Shield[/b]\nNone\n\n[i]Equipment data is not implemented yet.[/i]"
+func _build_equipment_text(unit: Unit) -> String:
+	var weapon_text := "None"
+	if unit.equipped_weapon != null:
+		weapon_text = "%s (%s)\nDamage: +%d | Weight: %d | Range: %d–%d" % [
+			unit.equipped_weapon.display_name,
+			str(unit.equipped_weapon.weapon_type),
+			unit.equipped_weapon.damage,
+			unit.equipped_weapon.weight,
+			unit.minimum_attack_range,
+			unit.attack_range,
+		]
+
+	var armor_text := "None"
+	if unit.equipped_armor != null:
+		armor_text = "%s (%s)\nArmor: +%d | Weight: %d" % [
+			unit.equipped_armor.display_name,
+			str(unit.equipped_armor.armor_type),
+			unit.equipped_armor.armor_value,
+			unit.equipped_armor.weight,
+		]
+
+	return "[b]Weapon[/b]\n%s\n\n[b]Armor[/b]\n%s\n\n[b]Load[/b]\nTotal Weight: %d | Penalty: %d\nBattle Speed: %d\n\n[b]Shield[/b]\nNone" % [
+		weapon_text,
+		armor_text,
+		unit.get_total_weight(),
+		unit.get_weight_penalty(),
+		unit.get_battle_speed(),
+	]
 
 
-func _build_skills_text(_unit: Unit) -> String:
-	return "[b]Weapon Attack[/b]\nBasic Attack — damage: Strength\n\n[b]Active Skills[/b]\nNone\n\n[b]Passive Skills[/b]\nNone\n\n[i]Data-driven skills are not implemented yet.[/i]"
+func _build_skills_text(unit: Unit) -> String:
+	var attack_name := "Unarmed Attack"
+	if unit.equipped_weapon != null:
+		attack_name = "%s Attack" % str(unit.equipped_weapon.weapon_type)
+	return "[b]Weapon Attack[/b]\n%s\nPhysical Power: %d (Strength %d + Weapon %d)\n\n[b]Active Skills[/b]\nNone\n\n[b]Passive Skills[/b]\nNone" % [
+		attack_name,
+		unit.get_physical_damage(),
+		unit.strength,
+		unit.get_weapon_damage(),
+	]

@@ -16,6 +16,7 @@ func _run() -> void:
 	await _test_battle_scene("res://game.tscn", 1, 1)
 	await _test_battle_scene("res://game_map2.tscn", 2, 2)
 	await _test_reachable_cells()
+	_test_equipment()
 	_test_progression()
 	_test_combat_basics()
 	await _test_hp_damage_effects()
@@ -72,6 +73,20 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 					all_use_fe8_visuals = false
 					break
 			_expect(all_use_fe8_visuals, "%s uses FE8 map-sprite animations for every unit" % scene_path)
+		var equipped_units: Array[Unit] = manager.player_units.duplicate()
+		equipped_units.append_array(manager.enemy_units)
+		var all_have_loadouts := not equipped_units.is_empty()
+		for unit in equipped_units:
+			if unit.equipped_weapon == null or unit.equipped_armor == null:
+				all_have_loadouts = false
+				break
+		_expect(all_have_loadouts, "%s equips every field unit with a weapon and armor" % scene_path)
+		if expected_players > 1 and expected_enemies > 1:
+			_expect(
+				manager.player_units[1].equipped_weapon == EquipmentCatalog.LONGBOW \
+				and manager.enemy_units[1].equipped_armor == EquipmentCatalog.STEEL_PLATE_HARNESS,
+				"%s uses varied field loadouts, including a longbow and steel plate armor" % scene_path
+			)
 
 	var unit_tabs_work := false
 	if manager != null \
@@ -98,7 +113,8 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 			and characteristics_label.text.count("Growth:") == 5 \
 			and not characteristics_label.text.contains("Armor") \
 			and not characteristics_label.text.contains("Damage") \
-			and not equipment_label.text.is_empty() \
+			and equipment_label.text.contains(focused_unit.equipped_weapon.display_name) \
+			and equipment_label.text.contains(focused_unit.equipped_armor.display_name) \
 			and not skills_label.text.is_empty()
 	_expect(unit_tabs_work, "%s shows one unit window with three information tabs" % scene_path)
 	var progression_ui_works := false
@@ -288,6 +304,62 @@ func _test_combat_basics() -> void:
 	var damage: int = defender.take_damage(attacker.get_physical_damage())
 	_expect(damage == 12 and defender.current_hp == 8, "A successful strike applies physical damage")
 
+	attacker.free()
+	defender.free()
+
+
+func _test_equipment() -> void:
+	var weapons := EquipmentCatalog.all_weapons()
+	var armor_catalog := EquipmentCatalog.all_armor()
+	_expect(
+		weapons.size() == 7 \
+		and armor_catalog.size() == 6 \
+		and EquipmentCatalog.BASIC_SWORD.display_name == "Basic Sword" \
+		and EquipmentCatalog.BASIC_AXE.display_name == "Basic Axe" \
+		and EquipmentCatalog.MAIL_HAUBERK.armor_value == 5 \
+		and EquipmentCatalog.MAIL_HAUBERK.weight == 7 \
+		and EquipmentCatalog.STEEL_PLATE_HARNESS.armor_value == 10 \
+		and EquipmentCatalog.STEEL_PLATE_HARNESS.weight == 14,
+		"The equipment catalog loads seven weapons and six medieval armor types"
+	)
+
+	var attacker := Unit.new()
+	attacker.set_stats(20, 10, 10, 80, 0, 0)
+	attacker.equip_weapon(EquipmentCatalog.BASIC_SWORD)
+	attacker.equip_armor(EquipmentCatalog.MAIL_HAUBERK)
+	var defender := Unit.new()
+	defender.set_stats(20, 8, 6, 70, 0, 0)
+	defender.equip_weapon(EquipmentCatalog.BASIC_AXE)
+	defender.equip_armor(EquipmentCatalog.STEEL_PLATE_HARNESS)
+	_expect(
+		attacker.get_total_weight() == 11 \
+		and attacker.get_weight_penalty() == 1 \
+		and attacker.get_battle_speed() == 9,
+		"Weapon and armor weight produce a Strength-based Battle Speed penalty"
+	)
+	_expect(
+		attacker.get_physical_damage() == 15 \
+		and defender.get_armor_value() == 10 \
+		and attacker.get_physical_damage_against(defender) == 5,
+		"Weapon damage adds to Strength and Armor reduces final damage"
+	)
+	attacker.faction = Unit.Faction.PLAYER
+	defender.faction = Unit.Faction.ENEMY
+	attacker.cell = Vector2i.ZERO
+	defender.cell = Vector2i.RIGHT
+	var equipment_forecast := CombatResolver.forecast(attacker, defender, attacker.cell)
+	_expect(
+		int(equipment_forecast["defender_hp_after"]) == 15 \
+		and int(equipment_forecast["attacker_hp_after"]) == 10,
+		"Combat forecasts use weapon damage and both units' equipped Armor"
+	)
+	attacker.equip_weapon(EquipmentCatalog.LONGBOW)
+	_expect(
+		not attacker.can_attack_from_cell(Vector2i.ZERO, Vector2i.RIGHT) \
+		and attacker.can_attack_from_cell(Vector2i.ZERO, Vector2i(2, 0)) \
+		and attacker.can_attack_from_cell(Vector2i.ZERO, Vector2i(3, 0)),
+		"Weapon minimum and maximum ranges control valid attacks"
+	)
 	attacker.free()
 	defender.free()
 

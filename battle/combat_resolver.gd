@@ -32,17 +32,19 @@ static func forecast(attacker: Unit, defender: Unit, attacker_cell: Vector2i) ->
 
 	var attacker_hp_after: int = attacker.current_hp
 	var defender_hp_after: int = defender.current_hp
-	var attacker_strikes_first: bool = not (defender.speed > attacker.speed and defender_can)
+	var attacker_strikes_first: bool = not (
+		defender.get_battle_speed() > attacker.get_battle_speed() and defender_can
+	)
 	result["attacker_strikes_first"] = attacker_strikes_first
 
 	if attacker_strikes_first:
-		defender_hp_after = maxi(0, defender_hp_after - attacker.get_physical_damage())
+		defender_hp_after = maxi(0, defender_hp_after - attacker.get_physical_damage_against(defender))
 		if defender_hp_after > 0 and defender_can:
-			attacker_hp_after = maxi(0, attacker_hp_after - defender.get_physical_damage())
+			attacker_hp_after = maxi(0, attacker_hp_after - defender.get_physical_damage_against(attacker))
 	else:
-		attacker_hp_after = maxi(0, attacker_hp_after - defender.get_physical_damage())
+		attacker_hp_after = maxi(0, attacker_hp_after - defender.get_physical_damage_against(attacker))
 		if attacker_hp_after > 0:
-			defender_hp_after = maxi(0, defender_hp_after - attacker.get_physical_damage())
+			defender_hp_after = maxi(0, defender_hp_after - attacker.get_physical_damage_against(defender))
 
 	result["attacker_hp_after"] = attacker_hp_after
 	result["defender_hp_after"] = defender_hp_after
@@ -52,7 +54,7 @@ static func forecast(attacker: Unit, defender: Unit, attacker_cell: Vector2i) ->
 static func _can_attack_from_cell(attacker: Unit, attacker_cell: Vector2i, defender_cell: Vector2i) -> bool:
 	return attacker != null \
 		and attacker.is_alive() \
-		and abs(attacker_cell.x - defender_cell.x) + abs(attacker_cell.y - defender_cell.y) <= attacker.attack_range
+		and attacker.can_attack_from_cell(attacker_cell, defender_cell)
 
 
 func configure(random_source: RandomNumberGenerator) -> void:
@@ -65,7 +67,7 @@ func resolve(attacker: Unit, defender: Unit) -> void:
 
 	var first: Unit = attacker
 	var second: Unit = defender
-	if defender.speed > attacker.speed and defender.can_attack(attacker):
+	if defender.get_battle_speed() > attacker.get_battle_speed() and defender.can_attack(attacker):
 		first = defender
 		second = attacker
 
@@ -90,7 +92,7 @@ func _perform_strike(attacker: Unit, defender: Unit) -> void:
 
 	var random_roll: int = rng.randi_range(1, 100) if rng != null else 1
 	if random_roll <= attacker.get_hit_chance_against(defender):
-		defender.take_damage(attacker.get_physical_damage())
+		defender.take_damage(attacker.get_physical_damage_against(defender))
 		if not defender.is_alive():
 			unit_defeated.emit(defender, attacker)
 	combat_state_changed.emit()

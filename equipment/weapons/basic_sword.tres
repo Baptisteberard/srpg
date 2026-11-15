@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://equipment/weapon_definition.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+display_name = "Basic Sword"
+weapon_type = &"Sword"
+description = "A simple one-handed arming sword."
+damage = 5
+weight = 4
+minimum_range = 1
+maximum_range = 1

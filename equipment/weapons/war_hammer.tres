@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://equipment/weapon_definition.gd" id="1_weapon"]
+
+[resource]
+script = ExtResource("1_weapon")
+display_name = "War Hammer"
+weapon_type = &"Hammer"
+description = "A military hammer designed for concentrated impact."
+damage = 8
+weight = 8
+minimum_range = 1
+maximum_range = 1

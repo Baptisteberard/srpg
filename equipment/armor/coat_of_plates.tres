@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ArmorDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://equipment/armor_definition.gd" id="1_armor"]
+
+[resource]
+script = ExtResource("1_armor")
+display_name = "Coat of Plates"
+armor_type = &"Plate Reinforced"
+description = "Metal plates riveted inside a cloth or leather outer garment."
+armor_value = 7
+weight = 10
