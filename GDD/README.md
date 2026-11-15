@@ -123,14 +123,25 @@ skip the accuracy roll and display `100%`.
 ```text
 Displayed Crit = clamp(
     Skill Base Crit + floor(Dexterity / 4) + Flat Crit Modifiers
-    - Target Critical Avoid,
+    - Target Evasion,
     0,
     100
 )
 ```
 
-Critical Avoid is a derived value supplied by classes, equipment, or passives;
-it is `0` when no source provides it.
+The critical roll happens only after the attack hits. Evasion therefore reduces
+both the initial hit chance and the chance that a successful hit becomes a
+critical hit. Skills marked `cannot miss` still subtract Evasion from their
+critical chance unless they also specify `cannot crit`.
+
+Example:
+
+```text
+Sword Base Crit = 5
+Attacker Dexterity = 20
+Target Evasion = 8
+Displayed Crit = clamp(5 + floor(20 / 4) - 8, 0, 100) = 2%
+```
 
 Critical damage is `2 × Final Damage` (**initial tuning value**). Healing and
 skills marked `cannot crit` skip the critical roll.
