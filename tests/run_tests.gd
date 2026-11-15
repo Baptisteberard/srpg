@@ -12,6 +12,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_test_fe8_map_sprite_import()
 	await _test_battle_scene("res://game.tscn", 1, 1)
 	await _test_battle_scene("res://game_map2.tscn", 2, 2)
 	await _test_reachable_cells()
@@ -46,9 +47,50 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 	if manager != null:
 		_expect(manager.player_units.size() == expected_players, "%s spawns %d player units" % [scene_path, expected_players])
 		_expect(manager.enemy_units.size() == expected_enemies, "%s spawns %d enemy units" % [scene_path, expected_enemies])
+		if FE8MapSpriteImporter.source_available():
+			var animated_units: Array[Unit] = manager.player_units.duplicate()
+			animated_units.append_array(manager.enemy_units)
+			var all_use_fe8_visuals := true
+			for unit in animated_units:
+				if not unit.has_fe8_map_sprite_animation():
+					all_use_fe8_visuals = false
+					break
+			_expect(all_use_fe8_visuals, "%s uses FE8 map-sprite animations for every unit" % scene_path)
 
 	battle.queue_free()
 	await process_frame
+
+
+func _test_fe8_map_sprite_import() -> void:
+	if not FE8MapSpriteImporter.source_available():
+		_expect(
+			FE8MapSpriteImporter.load_animation("Recruit", "ally") == null,
+			"Missing local FE8 art cleanly preserves the fallback visuals"
+		)
+		return
+
+	var recruit := FE8MapSpriteImporter.load_animation("Recruit", "ally")
+	var brigand := FE8MapSpriteImporter.load_animation("Brigand", "enemy")
+	_expect(
+		recruit != null and brigand != null and recruit.is_valid() and brigand.is_valid(),
+		"The local FE8 sheet imports Recruit and enemy-palette Brigand animations"
+	)
+	if recruit == null or brigand == null:
+		return
+	_expect(
+		recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.IDLE) == 4 \
+		and recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.WALK_RIGHT) == 4 \
+		and brigand.sprite_frames.has_animation(FE8MapSpriteAnimation.SELECTED),
+		"FE8 standing, selected, and directional movement sequences are available"
+	)
+	var brigand_image := brigand.compact_texture.get_image()
+	_expect(
+		brigand.faction_palette == "enemy" \
+		and brigand_image.get_used_rect().has_area() \
+		and is_zero_approx(brigand_image.get_pixel(0, 0).a) \
+		and brigand_image.get_pixel(13, 15).is_equal_approx(Color8(224, 16, 16)),
+		"FE8 enemy palette conversion produces red sprites with transparent backgrounds"
+	)
 
 
 func _test_reachable_cells() -> void:

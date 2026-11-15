@@ -5,3 +5,7 @@
 # Local tooling caches and machine-specific editor settings
 .sfdx/
 .vscode/settings.json
+
+# Local copyrighted reference art. Runtime code falls back safely when absent.
+/assets/fire_emblem_sacred_stones/map_sprites.png
+/assets/fire_emblem_sacred_stones/map_sprites.png.import

@@ -25,3 +25,4 @@ class_name UnitStats
 
 @export_group("Visuals")
 @export var texture: Texture2D
+@export var fe8_map_sprite_animation: FE8MapSpriteAnimation

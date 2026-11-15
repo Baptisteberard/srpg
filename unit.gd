@@ -45,7 +45,9 @@ var has_acted: bool = false
 var is_moving: bool = false
 var is_visually_moving: bool = false
 
-var sprite: Sprite2D = null
+var sprite: AnimatedSprite2D = null
+var fe8_map_sprite_animation: FE8MapSpriteAnimation = null
+var is_selected_visual: bool = false
 
 func _ready() -> void:
 	add_to_group("units")
@@ -97,7 +99,9 @@ func apply_definition(definition: UnitStats, reset_current_hp: bool = true) -> v
 	blocks_enemies = definition.blocks_enemies
 	attack_lunge_time = maxf(0.0, definition.attack_lunge_time)
 	attack_return_time = maxf(0.0, definition.attack_return_time)
-	if definition.texture != null:
+	if definition.fe8_map_sprite_animation != null:
+		set_fe8_map_sprite_animation(definition.fe8_map_sprite_animation)
+	elif definition.texture != null:
 		set_texture(definition.texture)
 
 func set_display_name(new_name: String) -> void:
@@ -108,17 +112,40 @@ func get_display_name() -> String:
 		return unit_name.strip_edges()
 	return name
 
-func _get_sprite() -> Sprite2D:
+func _get_sprite() -> AnimatedSprite2D:
 	if sprite == null:
-		sprite = get_node("Sprite2D") as Sprite2D
+		sprite = get_node("Sprite2D") as AnimatedSprite2D
 	return sprite
 
 func set_texture(tex: Texture2D) -> void:
-	_get_sprite().texture = tex
+	fe8_map_sprite_animation = null
+	var frames := SpriteFrames.new()
+	frames.set_animation_loop(&"default", false)
+	frames.add_frame(&"default", tex)
+	_get_sprite().sprite_frames = frames
+	_get_sprite().animation = &"default"
+	_get_sprite().play()
+	_refresh_visual_scale()
+
+func set_fe8_map_sprite_animation(animation: FE8MapSpriteAnimation) -> void:
+	if animation == null or not animation.is_valid():
+		return
+	fe8_map_sprite_animation = animation
+	_get_sprite().sprite_frames = animation.sprite_frames
+	_get_sprite().flip_h = false
+	_play_stationary_visual()
+	_refresh_visual_scale()
+
+func has_fe8_map_sprite_animation() -> bool:
+	return fe8_map_sprite_animation != null and fe8_map_sprite_animation.is_valid()
+
+func get_visual_animation_name() -> StringName:
+	return _get_sprite().animation
 
 func set_tile_size(tile_size: Vector2i) -> void:
 	if tile_size.x > 0 and tile_size.y > 0:
 		tile_size_px = Vector2(tile_size)
+	_refresh_visual_scale()
 	queue_redraw()
 
 func is_alive() -> bool:
@@ -166,6 +193,8 @@ func play_attack_animation(target_world_pos: Vector2) -> void:
 
 	is_visually_moving = true
 	visual_motion_started.emit(self)
+	if has_fe8_map_sprite_animation():
+		_get_sprite().play(FE8MapSpriteAnimation.SELECTED)
 	var tw: Tween = create_tween()
 	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.tween_property(self, "global_position", hit_pos, attack_lunge_time)
@@ -174,6 +203,7 @@ func play_attack_animation(target_world_pos: Vector2) -> void:
 	await tw.finished
 	global_position = start_pos
 	is_visually_moving = false
+	_play_stationary_visual()
 	position_changed.emit(self)
 	visual_motion_finished.emit(self)
 
@@ -195,7 +225,39 @@ func set_cell(new_cell: Vector2i, world_pos: Vector2) -> void:
 	position_changed.emit(self)
 
 func set_selected(selected: bool) -> void:
-	_get_sprite().scale = Vector2(1.15, 1.15) if selected else Vector2.ONE
+	is_selected_visual = selected
+	_refresh_visual_scale()
+	if not is_visually_moving:
+		_play_stationary_visual()
+
+func _refresh_visual_scale() -> void:
+	var base_scale := 1.0
+	if has_fe8_map_sprite_animation():
+		base_scale = maxf(1.0, minf(tile_size_px.x, tile_size_px.y) / float(FE8MapSpriteAnimation.FRAME_SIZE.x))
+	if is_selected_visual:
+		base_scale *= 1.15
+	_get_sprite().scale = Vector2.ONE * base_scale
+
+func _play_stationary_visual() -> void:
+	if not has_fe8_map_sprite_animation():
+		return
+	_get_sprite().flip_h = false
+	_get_sprite().play(
+		FE8MapSpriteAnimation.SELECTED if is_selected_visual else FE8MapSpriteAnimation.IDLE
+	)
+
+func _play_walk_direction(direction: Vector2i) -> void:
+	if not has_fe8_map_sprite_animation():
+		return
+	var animation_name := FE8MapSpriteAnimation.WALK_DOWN
+	if direction.x < 0:
+		animation_name = FE8MapSpriteAnimation.WALK_LEFT
+	elif direction.x > 0:
+		animation_name = FE8MapSpriteAnimation.WALK_RIGHT
+	elif direction.y < 0:
+		animation_name = FE8MapSpriteAnimation.WALK_UP
+	_get_sprite().flip_h = false
+	_get_sprite().play(animation_name)
 
 func _draw() -> void:
 	if not draw_hp_bar_in_unit:
@@ -235,12 +297,17 @@ func move_along(path: Array[Vector2i], board: Node, step_time: float = 0.12) -> 
 	is_visually_moving = true
 	visual_motion_started.emit(self)
 	var tw := create_tween()
+	var previous_cell := cell
 	for c in path:
+		var direction: Vector2i = c - previous_cell
+		tw.tween_callback(_play_walk_direction.bind(direction))
 		tw.tween_property(self, "global_position", board.cell_to_world(c), step_time)
+		previous_cell = c
 	await tw.finished
 	cell = path[path.size() - 1]
 	is_moving = false
 	is_visually_moving = false
+	_play_stationary_visual()
 	position_changed.emit(self)
 	visual_motion_finished.emit(self)
 	move_finished.emit(self)

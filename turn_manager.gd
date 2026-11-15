@@ -180,7 +180,8 @@ func _add_unit(faction: Unit.Faction, cell: Vector2i, tex: Texture2D, definition
 		if definition.display_name.strip_edges() == "":
 			u.set_display_name(auto_name)
 	u.set_tile_size(board.tile_set.tile_size)
-	if definition == null or definition.texture == null:
+	if definition == null \
+	or (definition.texture == null and definition.fe8_map_sprite_animation == null):
 		u.set_texture(tex)
 	u.clicked.connect(_on_unit_clicked)
 

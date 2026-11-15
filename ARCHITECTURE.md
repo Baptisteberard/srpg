@@ -24,6 +24,8 @@ highlights, HP overlay, HUD, unit scene, and battle controller.
 | `UnitHpOverlay` | Event-driven HP bars, forecast pulses, delayed damage trails, and death fades |
 | `Unit` | Runtime unit state, input, movement/attack animation, and defeat fade |
 | `UnitDefinition` | Reusable unit stats, movement/combat rules, and optional texture |
+| `FE8MapSpriteImporter` | Optional local extraction, transparency, and faction-palette conversion for the FE8 reference sheet |
+| `FE8MapSpriteAnimation` | Explicit FE8 standing, selected, and four-direction movement animation data |
 
 ## Battle state
 
@@ -44,6 +46,11 @@ remain on the runtime `Unit`.
 
 `UnitStats` remains as a compatibility base for resources made before the
 architecture update.
+
+When the local Sacred Stones reference sheet is present, `BattleRuntime`
+supplies Recruit animations to player units and enemy-palette Brigand
+animations to enemy units. Both maps use this shared path. Public clones that
+do not contain the copyrighted sheet retain the generated circle fallback.
 
 ## Tests
 
