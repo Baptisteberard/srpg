@@ -45,6 +45,21 @@ characteristic: it is primarily derived from equipment, class, and effects.
 Temporary bonuses do not satisfy class or equipment requirements. Requirements
 use permanent characteristics after permanent level-up gains.
 
+## Unit information interface
+
+Selecting or inspecting a unit opens one contextual window with three tabs:
+
+1. **Characteristics** — identity, HP, core characteristics, derived combat
+   values, and the combat forecast when targeting an enemy.
+2. **Equipment** — weapon, armor, shield or off-hand, their requirements, and
+   their relevant combat values.
+3. **Skills** — the granted Weapon Attack plus active, passive, and reaction
+   skills.
+
+The tabs share the same focused unit and never open as separate overlapping
+windows. Until equipment and data-driven skills are implemented, their tabs
+identify the current prototype placeholders explicitly.
+
 ## Weight and Battle Speed
 
 ```text

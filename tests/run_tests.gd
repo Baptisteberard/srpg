@@ -42,6 +42,11 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 
 	var board: Board = battle.get_node_or_null("Board") as Board
 	var manager: TurnManager = battle.find_child("TurnManager", true, false) as TurnManager
+	var hud := battle.find_child("UI", true, false) as BattleHud
+	var unit_info_panel := battle.find_child("UnitStatsPanel", true, false) as PanelContainer
+	var unit_info_tabs := battle.find_child("UnitInfoTabs", true, false) as TabContainer
+	var equipment_label := battle.find_child("EquipmentLabel", true, false) as RichTextLabel
+	var skills_label := battle.find_child("SkillsLabel", true, false) as RichTextLabel
 	var settings_toggle := battle.find_child("UnitVisualSettingsToggle", true, false) as Button
 	var settings_panel := battle.find_child("UnitVisualSettingsPanel", true, false) as PanelContainer
 	var size_slider := battle.find_child("UnitSizeSlider", true, false) as HSlider
@@ -62,6 +67,25 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 					all_use_fe8_visuals = false
 					break
 			_expect(all_use_fe8_visuals, "%s uses FE8 map-sprite animations for every unit" % scene_path)
+
+	var unit_tabs_work := false
+	if manager != null \
+	and hud != null \
+	and unit_info_panel != null \
+	and unit_info_tabs != null \
+	and equipment_label != null \
+	and skills_label != null \
+	and not manager.player_units.is_empty():
+		hud.focus_unit(manager.player_units[0])
+		await process_frame
+		unit_tabs_work = unit_info_panel.visible \
+			and unit_info_tabs.get_tab_count() == 3 \
+			and unit_info_tabs.get_tab_title(0) == "Characteristics" \
+			and unit_info_tabs.get_tab_title(1) == "Equipment" \
+			and unit_info_tabs.get_tab_title(2) == "Skills" \
+			and not equipment_label.text.is_empty() \
+			and not skills_label.text.is_empty()
+	_expect(unit_tabs_work, "%s shows one unit window with three information tabs" % scene_path)
 
 	var visual_settings_work := false
 	if manager != null \
