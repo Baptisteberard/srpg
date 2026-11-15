@@ -84,8 +84,9 @@ func _test_fe8_map_sprite_import() -> void:
 		and recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.WALK_RIGHT) == 4 \
 		and recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.WALK_DOWN) == 4 \
 		and recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.WALK_UP) == 4 \
-		and brigand.sprite_frames.has_animation(FE8MapSpriteAnimation.WALK_LEFT),
-		"FE8 idle columns have three frames and movement columns have four"
+		and brigand.sprite_frames.has_animation(FE8MapSpriteAnimation.WALK_LEFT) \
+		and FE8MapSpriteImporter.MOVEMENT_SOURCE_ROW_OFFSETS == [0, 1, 2, -1],
+		"FE8 idles have three frames and movement reads its fourth frame above"
 	)
 	var brigand_image := brigand.compact_texture.get_image()
 	var contains_enemy_red := false

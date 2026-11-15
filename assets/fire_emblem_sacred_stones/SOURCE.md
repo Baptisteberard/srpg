@@ -13,6 +13,7 @@ importer currently recognizes the labelled Recruit and Brigand blocks, removes
 the sheet backgrounds, applies the original FE8 faction palettes, and reads the
 two idle columns plus the vertical side/down/up movement columns. Rightward
 movement mirrors the side sequence. Each idle has three frames and each movement
-sequence has four. It builds `FE8MapSpriteAnimation` resources in memory. The
-PNG is intentionally ignored by Git so public clones use the project's fallback
-unit visuals.
+sequence has four; the fourth movement frame is stored one cell above the other
+three on the source sheet. It builds `FE8MapSpriteAnimation` resources in
+memory. The PNG is intentionally ignored by Git so public clones use the
+project's fallback unit visuals.

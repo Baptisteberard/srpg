@@ -11,6 +11,8 @@ signal visual_motion_finished(unit: Unit)
 
 enum Faction { PLAYER, ENEMY }
 
+const FE8_DISPLAY_SCALE_MULTIPLIER: float = 2.0
+
 @export var faction: Faction = Faction.PLAYER
 @export var unit_name: String = ""
 @export var move_range: int = 8
@@ -249,7 +251,10 @@ func _on_mouse_exited() -> void:
 func _refresh_visual_scale() -> void:
 	var base_scale := 1.0
 	if has_fe8_map_sprite_animation():
-		base_scale = maxf(1.0, minf(tile_size_px.x, tile_size_px.y) / float(FE8MapSpriteAnimation.FRAME_SIZE.x))
+		base_scale = (
+			maxf(1.0, minf(tile_size_px.x, tile_size_px.y) / float(FE8MapSpriteAnimation.FRAME_SIZE.x))
+			* FE8_DISPLAY_SCALE_MULTIPLIER
+		)
 	if is_selected_visual:
 		base_scale *= 1.15
 	_get_sprite().scale = Vector2.ONE * base_scale

@@ -14,7 +14,8 @@ const COMPACT_ROWS: int = 5
 # Source columns are idle 1, side movement, down movement, up movement, idle 2.
 # Compact rows put the two idle sequences first for FE8MapSpriteAnimation.
 const SOURCE_COLUMN_BY_COMPACT_ROW: Array[int] = [0, 4, 1, 2, 3]
-const FRAME_COUNT_BY_COMPACT_ROW: Array[int] = [3, 3, 4, 4, 4]
+const IDLE_SOURCE_ROW_OFFSETS: Array[int] = [0, 1, 2]
+const MOVEMENT_SOURCE_ROW_OFFSETS: Array[int] = [0, 1, 2, -1]
 
 const PALETTE_X: int = 53
 const PALETTE_STRIDE: int = 8
@@ -119,13 +120,17 @@ static func _extract_compact_sheet(source: Image, layout: Dictionary, palette_na
 	)
 	output.fill(Color(0.0, 0.0, 0.0, 0.0))
 
-	# Every sequence runs vertically: three frames for idles, four for movement.
+	# Idles occupy the three main rows. Movement has those same three rows, but
+	# its fourth frame is stored one cell above them—not one cell below.
 	var moving_origin: Vector2i = layout["moving_origin"]
 	for output_row in range(SOURCE_COLUMN_BY_COMPACT_ROW.size()):
 		var source_column: int = SOURCE_COLUMN_BY_COMPACT_ROW[output_row]
-		var frame_count: int = FRAME_COUNT_BY_COMPACT_ROW[output_row]
-		for frame_index in range(frame_count):
-			var source_pos := moving_origin + Vector2i(source_column * CELL_STRIDE, frame_index * CELL_STRIDE)
+		var source_row_offsets: Array[int] = (
+			IDLE_SOURCE_ROW_OFFSETS if output_row < 2 else MOVEMENT_SOURCE_ROW_OFFSETS
+		)
+		for frame_index in range(source_row_offsets.size()):
+			var source_row: int = source_row_offsets[frame_index]
+			var source_pos := moving_origin + Vector2i(source_column * CELL_STRIDE, source_row * CELL_STRIDE)
 			var destination := Vector2i(frame_index * FRAME_SIZE.x, output_row * FRAME_SIZE.y)
 			_blit_processed_frame(source, output, source_pos, destination, palette_map, transparent_colors)
 
