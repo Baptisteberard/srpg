@@ -1,7 +1,7 @@
 extends RefCounted
 class_name CombatResolver
 
-signal unit_defeated(unit: Unit)
+signal unit_defeated(unit: Unit, victor: Unit)
 signal combat_state_changed
 
 var rng: RandomNumberGenerator
@@ -92,5 +92,5 @@ func _perform_strike(attacker: Unit, defender: Unit) -> void:
 	if random_roll <= attacker.get_hit_chance_against(defender):
 		defender.take_damage(attacker.get_physical_damage())
 		if not defender.is_alive():
-			unit_defeated.emit(defender)
+			unit_defeated.emit(defender, attacker)
 	combat_state_changed.emit()

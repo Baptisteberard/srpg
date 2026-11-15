@@ -8,14 +8,20 @@ signal health_changed(unit: Unit)
 signal position_changed(unit: Unit)
 signal visual_motion_started(unit: Unit)
 signal visual_motion_finished(unit: Unit)
+signal experience_changed(unit: Unit)
+signal leveled_up(unit: Unit, gains: Dictionary)
 
 enum Faction { PLAYER, ENEMY }
 
 const FE8_DISPLAY_SCALE_MULTIPLIER: float = 2.0
+const EXPERIENCE_PER_LEVEL: int = 100
 
 @export var faction: Faction = Faction.PLAYER
 @export var unit_name: String = ""
 @export var unit_class_name: String = "Unclassed"
+@export_group("Progression")
+@export_range(1, 99, 1) var level: int = 1
+@export_range(0, 99, 1) var experience: int = 0
 @export var move_range: int = 8
 @export_group("Stats")
 @export var health: int = 20
@@ -25,11 +31,11 @@ const FE8_DISPLAY_SCALE_MULTIPLIER: float = 2.0
 @export var intellect: int = 0
 @export var armor: int = 0
 @export_group("Growth Rates")
-@export_range(0, 300, 1) var health_growth_rate: int = 0
-@export_range(0, 300, 1) var strength_growth_rate: int = 0
-@export_range(0, 300, 1) var speed_growth_rate: int = 0
-@export_range(0, 300, 1) var dexterity_growth_rate: int = 0
-@export_range(0, 300, 1) var intellect_growth_rate: int = 0
+@export_range(0, 300, 1) var health_growth_rate: int = 60
+@export_range(0, 300, 1) var strength_growth_rate: int = 40
+@export_range(0, 300, 1) var speed_growth_rate: int = 40
+@export_range(0, 300, 1) var dexterity_growth_rate: int = 40
+@export_range(0, 300, 1) var intellect_growth_rate: int = 20
 @export_group("Combat")
 @export var attack_range: int = 1
 @export var attack_lunge_time: float = 0.08
@@ -73,6 +79,8 @@ func _ready() -> void:
 	queue_redraw()
 
 func _sanitize_stats() -> void:
+	level = maxi(1, level)
+	experience = maxi(0, experience)
 	health = maxi(1, health)
 	strength = maxi(0, strength)
 	speed = maxi(0, speed)
@@ -107,6 +115,8 @@ func apply_definition(definition: UnitStats, reset_current_hp: bool = true) -> v
 	unit_class_name = definition.unit_class_name.strip_edges()
 	if unit_class_name == "":
 		unit_class_name = "Unclassed"
+	level = maxi(1, definition.level)
+	experience = clampi(definition.experience, 0, EXPERIENCE_PER_LEVEL - 1)
 	health_growth_rate = definition.health_growth_rate
 	strength_growth_rate = definition.strength_growth_rate
 	speed_growth_rate = definition.speed_growth_rate
@@ -144,6 +154,61 @@ func get_class_display_name() -> String:
 	if unit_class_name.strip_edges() != "":
 		return unit_class_name.strip_edges()
 	return "Unclassed"
+
+static func calculate_kill_experience(victor: Unit, defeated: Unit) -> int:
+	if victor == null or defeated == null:
+		return 0
+	return clampi(30 + 5 * (defeated.level - victor.level), 10, 60)
+
+func gain_experience(amount: int, random_source: RandomNumberGenerator = null) -> Array[Dictionary]:
+	var level_results: Array[Dictionary] = []
+	if amount <= 0 or not is_alive():
+		return level_results
+
+	experience += amount
+	while experience >= EXPERIENCE_PER_LEVEL:
+		experience -= EXPERIENCE_PER_LEVEL
+		level += 1
+		var gains := _roll_level_up(random_source)
+		gains["level"] = level
+		level_results.append(gains)
+		leveled_up.emit(self, gains)
+	experience_changed.emit(self)
+	return level_results
+
+func _roll_level_up(random_source: RandomNumberGenerator) -> Dictionary:
+	var gains: Dictionary = {
+		"health": _roll_growth(health_growth_rate, random_source),
+		"strength": _roll_growth(strength_growth_rate, random_source),
+		"speed": _roll_growth(speed_growth_rate, random_source),
+		"dexterity": _roll_growth(dexterity_growth_rate, random_source),
+		"intellect": _roll_growth(intellect_growth_rate, random_source),
+	}
+	health += int(gains["health"])
+	current_hp += int(gains["health"])
+	strength += int(gains["strength"])
+	speed += int(gains["speed"])
+	dexterity += int(gains["dexterity"])
+	intellect += int(gains["intellect"])
+	_sanitize_stats()
+	if int(gains["health"]) > 0:
+		health_changed.emit(self)
+	return gains
+
+func _roll_growth(growth_rate: int, random_source: RandomNumberGenerator) -> int:
+	var safe_rate := maxi(0, growth_rate)
+	var gain: int = safe_rate / 100
+	var remainder: int = safe_rate % 100
+	if remainder <= 0:
+		return gain
+	var roll: int
+	if random_source != null:
+		roll = random_source.randi_range(1, 100)
+	else:
+		roll = randi_range(1, 100)
+	if roll <= remainder:
+		gain += 1
+	return gain
 
 func _get_sprite() -> AnimatedSprite2D:
 	if sprite == null:

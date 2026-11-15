@@ -586,9 +586,14 @@ func _pick_adjacent_opponent(attacker: Unit) -> Unit:
 func _resolve_attack(attacker: Unit, defender: Unit) -> void:
 	await combat_resolver.resolve(attacker, defender)
 
-func _remove_unit(u: Unit) -> void:
+func _remove_unit(u: Unit, victor: Unit = null) -> void:
 	if u == null:
 		return
+	if victor != null and is_instance_valid(victor) and victor != u and victor.is_alive():
+		var experience_gained := Unit.calculate_kill_experience(victor, u)
+		var level_results := victor.gain_experience(experience_gained, rng)
+		if hud != null:
+			hud.show_progression_result(victor, experience_gained, level_results)
 	occ.erase(u.cell)
 	player_units.erase(u)
 	enemy_units.erase(u)

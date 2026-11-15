@@ -20,7 +20,7 @@ Status meanings:
 | Dexterity | Partial | Canonically named `dexterity` and used for hit chance. Critical, Block, and Parry effects are not implemented. |
 | Intellect | Partial | Stored and displayed, but has no magical-damage or healing behavior. |
 | Armor | Partial | Stored and displayed in underlying unit data, but does not reduce damage yet. |
-| Five growth-rate fields | Partial | Health, Strength, Speed, Dexterity, and Intellect growth values exist and are displayed. Level-up rolls do not exist. |
+| Five personal growth rates | Implemented | Health, Strength, Speed, Dexterity, and Intellect rates are editable, displayed, and rolled independently. |
 | Unit name and class header | Implemented | The focused unit's individual name and displayed class appear above the tabs. |
 | Characteristics tab | Implemented | Shows only the five characteristics and their growth rates. |
 | Equipment tab | Partial | Tab and honest placeholders exist; equipment data does not. |
@@ -80,16 +80,17 @@ Status meanings:
 
 | GDD feature | Status | Current prototype |
 | --- | --- | --- |
-| Unit level and EXP | Not implemented | Units have no level or EXP state. |
-| Kill EXP formula | Not implemented | Defeating a unit grants no EXP. |
-| `100 EXP` level-up threshold | Not implemented | No level-up flow exists. |
-| Random growth rolls | Not implemented | Growth rates are stored and displayed only. |
-| Growths above 100% | Not implemented | Guaranteed gains plus remainder rolls are design only. |
+| Unit level and EXP | Implemented | Units track level and EXP; the identity header displays both. |
+| Kill EXP formula | Implemented | The actual killer receives `30 + 5 × level difference`, limited to 10–60 EXP. |
+| `100 EXP` level-up threshold | Implemented | EXP carries over and one reward can grant multiple levels. |
+| Random growth rolls | Implemented | The five personal growths roll independently on every level. |
+| Growths above 100% | Implemented | Each full 100% guarantees `+1`; the remainder receives a separate percentage roll. |
+| Level-up result display | Implemented | A temporary HUD panel lists EXP gained, new levels, and every characteristic gain. |
 | Class stat caps | Not implemented | No caps are enforced. |
 | Class display name | Implemented | FE8 prototype units display Recruit or Brigand separately from their individual name. |
 | Class eligibility | Not implemented | Stat, level, prerequisite, and equipment-tag requirements do not exist. |
 | Class selection or promotion | Not implemented | The timing is also an open design decision. |
-| Class growth modifiers | Not implemented | Growth data currently has no class modifier. |
+| Class growth modifiers | Not implemented | Current level-ups use the configured personal growth rates directly. |
 | Class equipment permissions | Not implemented | No equipment system exists. |
 | Class-granted skills | Not implemented | No skill system exists. |
 

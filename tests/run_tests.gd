@@ -16,6 +16,7 @@ func _run() -> void:
 	await _test_battle_scene("res://game.tscn", 1, 1)
 	await _test_battle_scene("res://game_map2.tscn", 2, 2)
 	await _test_reachable_cells()
+	_test_progression()
 	_test_combat_basics()
 	await _test_hp_damage_effects()
 
@@ -49,6 +50,8 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 	var characteristics_label := battle.find_child("CharacteristicsLabel", true, false) as RichTextLabel
 	var equipment_label := battle.find_child("EquipmentLabel", true, false) as RichTextLabel
 	var skills_label := battle.find_child("SkillsLabel", true, false) as RichTextLabel
+	var progression_panel := battle.find_child("ProgressionPanel", true, false) as PanelContainer
+	var progression_label := battle.find_child("ProgressionLabel", true, false) as RichTextLabel
 	var settings_toggle := battle.find_child("UnitVisualSettingsToggle", true, false) as Button
 	var settings_panel := battle.find_child("UnitVisualSettingsPanel", true, false) as PanelContainer
 	var size_slider := battle.find_child("UnitSizeSlider", true, false) as HSlider
@@ -86,6 +89,8 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 		unit_tabs_work = unit_info_panel.visible \
 			and identity_label.text.contains(focused_unit.get_display_name()) \
 			and identity_label.text.contains(focused_unit.get_class_display_name()) \
+			and identity_label.text.contains("Level %d" % focused_unit.level) \
+			and identity_label.text.contains("EXP %d/%d" % [focused_unit.experience, Unit.EXPERIENCE_PER_LEVEL]) \
 			and unit_info_tabs.get_tab_count() == 3 \
 			and unit_info_tabs.get_tab_title(0) == "Characteristics" \
 			and unit_info_tabs.get_tab_title(1) == "Equipment" \
@@ -96,6 +101,17 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 			and not equipment_label.text.is_empty() \
 			and not skills_label.text.is_empty()
 	_expect(unit_tabs_work, "%s shows one unit window with three information tabs" % scene_path)
+	var progression_ui_works := false
+	if hud != null \
+	and manager != null \
+	and progression_panel != null \
+	and progression_label != null \
+	and not manager.player_units.is_empty():
+		hud.show_progression_result(manager.player_units[0], 30, [])
+		await process_frame
+		progression_ui_works = progression_panel.visible \
+			and progression_label.text.contains("gained 30 EXP")
+	_expect(progression_ui_works, "%s displays EXP and level-up results" % scene_path)
 
 	var visual_settings_work := false
 	if manager != null \
@@ -274,6 +290,53 @@ func _test_combat_basics() -> void:
 
 	attacker.free()
 	defender.free()
+
+
+func _test_progression() -> void:
+	var unit := Unit.new()
+	unit.set_stats(20, 5, 5, 10, 0, 0)
+	unit.level = 1
+	unit.experience = 90
+	unit.health_growth_rate = 100
+	unit.strength_growth_rate = 200
+	unit.speed_growth_rate = 0
+	unit.dexterity_growth_rate = 300
+	unit.intellect_growth_rate = 100
+	var random_source := RandomNumberGenerator.new()
+	random_source.seed = 12345
+	var results := unit.gain_experience(210, random_source)
+	_expect(
+		results.size() == 3 \
+		and unit.level == 4 \
+		and unit.experience == 0,
+		"EXP carries over and can grant multiple levels"
+	)
+	_expect(
+		unit.health == 23 \
+		and unit.current_hp == 23 \
+		and unit.strength == 11 \
+		and unit.speed == 5 \
+		and unit.dexterity == 19 \
+		and unit.intellect == 3,
+		"Level-up rolls apply guaranteed gains, including growth rates above 100%"
+	)
+
+	var defeated := Unit.new()
+	unit.level = 5
+	defeated.level = 7
+	_expect(
+		Unit.calculate_kill_experience(unit, defeated) == 40,
+		"Kill EXP scales with the level difference"
+	)
+	unit.level = 1
+	defeated.level = 20
+	var maximum_exp := Unit.calculate_kill_experience(unit, defeated)
+	unit.level = 20
+	defeated.level = 1
+	var minimum_exp := Unit.calculate_kill_experience(unit, defeated)
+	_expect(maximum_exp == 60 and minimum_exp == 10, "Kill EXP stays between 10 and 60")
+	unit.free()
+	defeated.free()
 
 
 func _test_hp_damage_effects() -> void:

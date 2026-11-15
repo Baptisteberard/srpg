@@ -48,6 +48,18 @@ func _make_fe8_definition(class_name_value: String, animation: FE8MapSpriteAnima
 	var definition := UnitDefinitionScript.new() as UnitStats
 	definition.display_name = ""
 	definition.unit_class_name = class_name_value
+	if class_name_value == "Recruit":
+		definition.health_growth_rate = 70
+		definition.strength_growth_rate = 40
+		definition.speed_growth_rate = 50
+		definition.dexterity_growth_rate = 55
+		definition.intellect_growth_rate = 10
+	elif class_name_value == "Brigand":
+		definition.health_growth_rate = 80
+		definition.strength_growth_rate = 60
+		definition.speed_growth_rate = 30
+		definition.dexterity_growth_rate = 35
+		definition.intellect_growth_rate = 5
 	definition.fe8_map_sprite_animation = animation
 	return definition
 

@@ -7,6 +7,10 @@ class_name UnitStats
 @export var display_name: String = ""
 @export var unit_class_name: String = "Unclassed"
 
+@export_group("Progression")
+@export_range(1, 99, 1) var level: int = 1
+@export_range(0, 99, 1) var experience: int = 0
+
 @export_group("Core Stats")
 @export var health: int = 20
 @export var strength: int = 12
@@ -16,11 +20,11 @@ class_name UnitStats
 @export var armor: int = 0
 
 @export_group("Growth Rates")
-@export_range(0, 300, 1) var health_growth_rate: int = 0
-@export_range(0, 300, 1) var strength_growth_rate: int = 0
-@export_range(0, 300, 1) var speed_growth_rate: int = 0
-@export_range(0, 300, 1) var dexterity_growth_rate: int = 0
-@export_range(0, 300, 1) var intellect_growth_rate: int = 0
+@export_range(0, 300, 1) var health_growth_rate: int = 60
+@export_range(0, 300, 1) var strength_growth_rate: int = 40
+@export_range(0, 300, 1) var speed_growth_rate: int = 40
+@export_range(0, 300, 1) var dexterity_growth_rate: int = 40
+@export_range(0, 300, 1) var intellect_growth_rate: int = 20
 
 @export_group("Movement")
 @export var move_range: int = 8

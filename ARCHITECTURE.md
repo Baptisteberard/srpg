@@ -20,13 +20,13 @@ highlights, HP overlay, HUD, unit scene, and battle controller.
 | `BattleRuntime` | Shared battle-scene composition and encounter configuration |
 | `TurnManager` | Turn orchestration, player commands, selection, and occupancy |
 | `GridNavigator` | Reachability and shortest-path calculations |
-| `CombatResolver` | Current prototype combat forecast, hit rolls, reciprocal attacks, damage, and defeat events |
+| `CombatResolver` | Current prototype combat forecast, hit rolls, reciprocal attacks, damage, and attributed defeat events |
 | `EnemyAI` | Enemy movement decisions; currently chooses a random reachable cell |
-| `BattleHud` | Unit identity header, tabbed unit details (Characteristics, Equipment, Skills), combat damage previews, phase label, End Turn interface, and collapsible live unit-display, animation-speed, and movement-speed controls |
+| `BattleHud` | Unit identity header, tabbed unit details, EXP/level-up results, combat damage previews, phase label, End Turn interface, and collapsible live unit-display, animation-speed, and movement-speed controls |
 | `HighlightMap` | Movement, attack, hover, and path-preview drawing |
 | `UnitHpOverlay` | Event-driven HP bars, forecast pulses, delayed damage trails, and death fades |
-| `Unit` | Runtime unit state, input, movement/attack animation, and defeat fade |
-| `UnitDefinition` | Reusable unit stats, movement/combat rules, and optional texture |
+| `Unit` | Runtime unit state, level/EXP and personal growth rolls, input, movement/attack animation, and defeat fade |
+| `UnitDefinition` | Reusable unit stats, starting progression, personal growth rates, movement/combat rules, and optional texture |
 | `FE8MapSpriteImporter` | Optional local extraction, transparency, and faction-palette conversion for the FE8 reference sheet |
 | `FE8MapSpriteAnimation` | Explicit FE8 dual-idle and four-direction movement animation data; right movement mirrors the side sequence |
 

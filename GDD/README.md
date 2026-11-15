@@ -390,6 +390,17 @@ Examples:
 Each characteristic rolls independently on level-up. A characteristic cannot
 exceed its current class cap. The level-up screen displays every successful gain.
 
+Current provisional prototype growth rates:
+
+| Unit definition | HP | Strength | Speed | Dexterity | Intellect |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Default / Unclassed | 60% | 40% | 40% | 40% | 20% |
+| Recruit | 70% | 40% | 50% | 55% | 10% |
+| Brigand | 80% | 60% | 30% | 35% | 5% |
+
+These are initial tuning values. Class growth modifiers and class stat caps are
+not implemented yet, so current rolls use the configured personal rate directly.
+
 ## Classes
 
 Class eligibility is checked only at a class-selection or promotion opportunity.
@@ -449,10 +460,11 @@ These values need playtesting before they become final:
 ## Current prototype gap
 
 The current code implements HP, Strength, Speed, Dexterity, Intellect, Armor,
-basic hit rolls, and data fields for a displayed class name and five growth
-rates. It does not yet implement the formulas in this document for weight,
-equipment, Armor mitigation, critical hits, skills, EXP, random level-up growth,
-or class eligibility and selection.
+basic hit rolls, unit levels, kill EXP, five personal growth rates, random
+level-up rolls, EXP carry-over, and visible level-up results. It does not yet
+implement the formulas in this document for weight, equipment, Armor mitigation,
+critical hits, skills, class stat caps, class growth modifiers, or class
+eligibility and selection.
 
 The prototype currently also contains speed-based strike order and reciprocal
 attacks. Those are legacy prototype behaviors, not approved GDD rules.

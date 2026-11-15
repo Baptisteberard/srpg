@@ -29,6 +29,9 @@ var equipment_scroll: ScrollContainer
 var equipment_label: RichTextLabel
 var skills_scroll: ScrollContainer
 var skills_label: RichTextLabel
+var progression_panel: PanelContainer
+var progression_label: RichTextLabel
+var progression_timer: Timer
 var unit_visual_settings_toggle: Button
 var unit_visual_settings_panel: PanelContainer
 var unit_size_slider: HSlider
@@ -48,7 +51,73 @@ var unit_movement_speed_multiplier: float = 1.0
 
 func _ready() -> void:
 	_build_stats_panel()
+	_build_progression_panel()
 	_build_unit_visual_settings_panel()
+
+
+func _build_progression_panel() -> void:
+	progression_panel = PanelContainer.new()
+	progression_panel.name = "ProgressionPanel"
+	progression_panel.visible = false
+	progression_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	progression_panel.offset_left = -220.0
+	progression_panel.offset_top = 16.0
+	progression_panel.offset_right = 220.0
+	progression_panel.offset_bottom = 180.0
+	add_child(progression_panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	progression_panel.add_child(margin)
+
+	progression_label = RichTextLabel.new()
+	progression_label.name = "ProgressionLabel"
+	progression_label.bbcode_enabled = true
+	progression_label.fit_content = true
+	progression_label.scroll_active = false
+	progression_label.custom_minimum_size = Vector2(400.0, 120.0)
+	progression_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	margin.add_child(progression_label)
+
+	progression_timer = Timer.new()
+	progression_timer.name = "ProgressionTimer"
+	progression_timer.one_shot = true
+	progression_timer.wait_time = 3.0
+	progression_timer.timeout.connect(_on_progression_timeout)
+	add_child(progression_timer)
+
+
+func show_progression_result(unit: Unit, experience_gained: int, level_results: Array[Dictionary]) -> void:
+	if unit == null or not is_instance_valid(unit) or progression_panel == null:
+		return
+	var lines: Array[String] = [
+		"[b]%s gained %d EXP[/b]" % [unit.get_display_name(), experience_gained]
+	]
+	for gains in level_results:
+		lines.append("[b]Level %d![/b]" % int(gains.get("level", unit.level)))
+		var stat_gains: Array[String] = []
+		_append_growth_result(stat_gains, "HP", int(gains.get("health", 0)))
+		_append_growth_result(stat_gains, "Strength", int(gains.get("strength", 0)))
+		_append_growth_result(stat_gains, "Speed", int(gains.get("speed", 0)))
+		_append_growth_result(stat_gains, "Dexterity", int(gains.get("dexterity", 0)))
+		_append_growth_result(stat_gains, "Intellect", int(gains.get("intellect", 0)))
+		lines.append(", ".join(stat_gains) if not stat_gains.is_empty() else "No characteristic gains")
+	progression_label.text = "\n".join(lines)
+	progression_panel.visible = true
+	progression_timer.start()
+	refresh()
+
+
+func _append_growth_result(results: Array[String], stat_name: String, gain: int) -> void:
+	if gain > 0:
+		results.append("%s +%d" % [stat_name, gain])
+
+
+func _on_progression_timeout() -> void:
+	progression_panel.visible = false
 
 
 func _build_unit_visual_settings_panel() -> void:
@@ -490,9 +559,12 @@ func _refresh_unit_window(unit: Unit) -> void:
 		equipment_label.text = ""
 		skills_label.text = ""
 		return
-	unit_identity_label.text = "[b]%s[/b]\nClass: %s" % [
+	unit_identity_label.text = "[b]%s[/b]\nClass: %s | Level %d | EXP %d/%d" % [
 		unit.get_display_name(),
 		unit.get_class_display_name(),
+		unit.level,
+		unit.experience,
+		Unit.EXPERIENCE_PER_LEVEL,
 	]
 	stats_label.text = _build_characteristics_text(unit)
 	equipment_label.text = _build_equipment_text(unit)
