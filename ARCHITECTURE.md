@@ -25,7 +25,7 @@ highlights, HP overlay, HUD, unit scene, and battle controller.
 | `Unit` | Runtime unit state, input, movement/attack animation, and defeat fade |
 | `UnitDefinition` | Reusable unit stats, movement/combat rules, and optional texture |
 | `FE8MapSpriteImporter` | Optional local extraction, transparency, and faction-palette conversion for the FE8 reference sheet |
-| `FE8MapSpriteAnimation` | Explicit FE8 standing, selected, and four-direction movement animation data |
+| `FE8MapSpriteAnimation` | Explicit FE8 dual-idle and four-direction movement animation data; right movement mirrors the side sequence |
 
 ## Battle state
 

@@ -9,8 +9,8 @@ class_name FE8MapSpriteAnimation
 
 const FRAME_SIZE: Vector2i = Vector2i(32, 32)
 
-const IDLE: StringName = &"idle"
-const SELECTED: StringName = &"selected"
+const IDLE_PRIMARY: StringName = &"idle_primary"
+const IDLE_SECONDARY: StringName = &"idle_secondary"
 const WALK_LEFT: StringName = &"walk_left"
 const WALK_DOWN: StringName = &"walk_down"
 const WALK_UP: StringName = &"walk_up"
@@ -40,12 +40,13 @@ func _build_sprite_frames() -> SpriteFrames:
 	if frames.has_animation(&"default"):
 		frames.remove_animation(&"default")
 
-	_add_ping_pong_animation(frames, IDLE, 0, 3.0)
-	_add_ping_pong_animation(frames, SELECTED, 1, 6.0)
+	_add_ping_pong_animation(frames, IDLE_PRIMARY, 0, 3.0)
+	_add_ping_pong_animation(frames, IDLE_SECONDARY, 1, 6.0)
 	_add_ping_pong_animation(frames, WALK_LEFT, 2, 10.0)
 	_add_ping_pong_animation(frames, WALK_DOWN, 3, 10.0)
 	_add_ping_pong_animation(frames, WALK_UP, 4, 10.0)
-	_add_ping_pong_animation(frames, WALK_RIGHT, 5, 10.0)
+	# FE8 stores one side-movement sequence. Unit mirrors it when moving right.
+	_add_ping_pong_animation(frames, WALK_RIGHT, 2, 10.0)
 	return frames
 
 

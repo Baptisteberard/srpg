@@ -194,7 +194,7 @@ func play_attack_animation(target_world_pos: Vector2) -> void:
 	is_visually_moving = true
 	visual_motion_started.emit(self)
 	if has_fe8_map_sprite_animation():
-		_get_sprite().play(FE8MapSpriteAnimation.SELECTED)
+		_get_sprite().play(FE8MapSpriteAnimation.IDLE_SECONDARY)
 	var tw: Tween = create_tween()
 	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.tween_property(self, "global_position", hit_pos, attack_lunge_time)
@@ -243,20 +243,22 @@ func _play_stationary_visual() -> void:
 		return
 	_get_sprite().flip_h = false
 	_get_sprite().play(
-		FE8MapSpriteAnimation.SELECTED if is_selected_visual else FE8MapSpriteAnimation.IDLE
+		FE8MapSpriteAnimation.IDLE_SECONDARY if is_selected_visual else FE8MapSpriteAnimation.IDLE_PRIMARY
 	)
 
 func _play_walk_direction(direction: Vector2i) -> void:
 	if not has_fe8_map_sprite_animation():
 		return
 	var animation_name := FE8MapSpriteAnimation.WALK_DOWN
+	var flip_horizontal := false
 	if direction.x < 0:
 		animation_name = FE8MapSpriteAnimation.WALK_LEFT
 	elif direction.x > 0:
 		animation_name = FE8MapSpriteAnimation.WALK_RIGHT
+		flip_horizontal = true
 	elif direction.y < 0:
 		animation_name = FE8MapSpriteAnimation.WALK_UP
-	_get_sprite().flip_h = false
+	_get_sprite().flip_h = flip_horizontal
 	_get_sprite().play(animation_name)
 
 func _draw() -> void:
