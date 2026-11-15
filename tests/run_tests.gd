@@ -42,6 +42,9 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 
 	var board: Board = battle.get_node_or_null("Board") as Board
 	var manager: TurnManager = battle.find_child("TurnManager", true, false) as TurnManager
+	var settings_panel := battle.find_child("UnitVisualSettingsPanel", true, false) as PanelContainer
+	var size_slider := battle.find_child("UnitSizeSlider", true, false) as HSlider
+	var offset_slider := battle.find_child("UnitVerticalOffsetSlider", true, false) as HSlider
 	_expect(board != null and not board.get_used_cells().is_empty(), "%s has a populated board" % scene_path)
 	_expect(manager != null, "%s has a TurnManager" % scene_path)
 	if manager != null:
@@ -56,6 +59,24 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 					all_use_fe8_visuals = false
 					break
 			_expect(all_use_fe8_visuals, "%s uses FE8 map-sprite animations for every unit" % scene_path)
+
+	var visual_settings_work := false
+	if manager != null and settings_panel != null and size_slider != null and offset_slider != null:
+		size_slider.value = 1.25
+		offset_slider.value = -12.0
+		await process_frame
+		var all_units: Array[Unit] = manager.player_units.duplicate()
+		all_units.append_array(manager.enemy_units)
+		visual_settings_work = not all_units.is_empty()
+		for unit in all_units:
+			if not is_equal_approx(unit.visual_size_multiplier, 1.25) \
+			or not is_equal_approx(unit._get_sprite().position.y, -12.0):
+				visual_settings_work = false
+				break
+	_expect(
+		settings_panel != null and size_slider != null and offset_slider != null and visual_settings_work,
+		"%s has working top-right unit display controls" % scene_path
+	)
 
 	battle.queue_free()
 	await process_frame

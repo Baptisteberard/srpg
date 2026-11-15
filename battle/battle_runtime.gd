@@ -54,8 +54,12 @@ func _make_fe8_definition(display_name: String, animation: FE8MapSpriteAnimation
 func _ready() -> void:
 	var hud: BattleHud = get_node_or_null("UI") as BattleHud
 	var hp_overlay: UnitHpOverlay = get_node_or_null("HpOverlay") as UnitHpOverlay
-	if hud == null or hp_overlay == null:
-		push_error("BattleRuntime: HUD or HP overlay child is missing.")
+	var manager: TurnManager = get_node_or_null("TurnManager") as TurnManager
+	if hud == null or hp_overlay == null or manager == null:
+		push_error("BattleRuntime: HUD, HP overlay, or TurnManager child is missing.")
 		return
 	if not hud.damage_preview_changed.is_connected(hp_overlay.set_damage_previews):
 		hud.damage_preview_changed.connect(hp_overlay.set_damage_previews)
+	if not hud.unit_visual_settings_changed.is_connected(manager.set_unit_visual_settings):
+		hud.unit_visual_settings_changed.connect(manager.set_unit_visual_settings)
+	manager.set_unit_visual_settings(hud.unit_size_multiplier, hud.unit_vertical_offset)

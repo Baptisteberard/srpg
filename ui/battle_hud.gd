@@ -2,6 +2,12 @@ extends CanvasLayer
 class_name BattleHud
 
 signal damage_preview_changed(damage_by_unit: Dictionary)
+signal unit_visual_settings_changed(size_multiplier: float, vertical_offset: float)
+
+const MIN_UNIT_SIZE_MULTIPLIER: float = 0.5
+const MAX_UNIT_SIZE_MULTIPLIER: float = 2.0
+const MIN_UNIT_VERTICAL_OFFSET: float = -64.0
+const MAX_UNIT_VERTICAL_OFFSET: float = 64.0
 
 var focused_unit: Unit
 var preview_attacker: Unit
@@ -11,10 +17,122 @@ var preview_attacker_cell: Vector2i = Vector2i.ZERO
 var stats_panel: PanelContainer
 var stats_scroll: ScrollContainer
 var stats_label: RichTextLabel
+var unit_visual_settings_panel: PanelContainer
+var unit_size_slider: HSlider
+var unit_size_value_label: Label
+var unit_vertical_offset_slider: HSlider
+var unit_vertical_offset_value_label: Label
+
+var unit_size_multiplier: float = 1.0
+var unit_vertical_offset: float = 0.0
 
 
 func _ready() -> void:
 	_build_stats_panel()
+	_build_unit_visual_settings_panel()
+
+
+func _build_unit_visual_settings_panel() -> void:
+	unit_visual_settings_panel = PanelContainer.new()
+	unit_visual_settings_panel.name = "UnitVisualSettingsPanel"
+	unit_visual_settings_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	unit_visual_settings_panel.offset_left = -316.0
+	unit_visual_settings_panel.offset_top = 16.0
+	unit_visual_settings_panel.offset_right = -16.0
+	unit_visual_settings_panel.offset_bottom = 154.0
+	add_child(unit_visual_settings_panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	unit_visual_settings_panel.add_child(margin)
+
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 6)
+	margin.add_child(rows)
+
+	var title := Label.new()
+	title.text = "Unit display"
+	title.add_theme_font_size_override("font_size", 16)
+	rows.add_child(title)
+
+	var controls := GridContainer.new()
+	controls.columns = 3
+	controls.add_theme_constant_override("h_separation", 8)
+	controls.add_theme_constant_override("v_separation", 6)
+	rows.add_child(controls)
+
+	var size_label := Label.new()
+	size_label.text = "Size"
+	controls.add_child(size_label)
+
+	unit_size_slider = HSlider.new()
+	unit_size_slider.name = "UnitSizeSlider"
+	unit_size_slider.custom_minimum_size.x = 150.0
+	unit_size_slider.min_value = MIN_UNIT_SIZE_MULTIPLIER
+	unit_size_slider.max_value = MAX_UNIT_SIZE_MULTIPLIER
+	unit_size_slider.step = 0.05
+	unit_size_slider.value = unit_size_multiplier
+	unit_size_slider.value_changed.connect(_on_unit_size_changed)
+	controls.add_child(unit_size_slider)
+
+	unit_size_value_label = Label.new()
+	unit_size_value_label.custom_minimum_size.x = 48.0
+	unit_size_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	controls.add_child(unit_size_value_label)
+
+	var offset_label := Label.new()
+	offset_label.text = "Y offset"
+	controls.add_child(offset_label)
+
+	unit_vertical_offset_slider = HSlider.new()
+	unit_vertical_offset_slider.name = "UnitVerticalOffsetSlider"
+	unit_vertical_offset_slider.custom_minimum_size.x = 150.0
+	unit_vertical_offset_slider.min_value = MIN_UNIT_VERTICAL_OFFSET
+	unit_vertical_offset_slider.max_value = MAX_UNIT_VERTICAL_OFFSET
+	unit_vertical_offset_slider.step = 1.0
+	unit_vertical_offset_slider.value = unit_vertical_offset
+	unit_vertical_offset_slider.value_changed.connect(_on_unit_vertical_offset_changed)
+	controls.add_child(unit_vertical_offset_slider)
+
+	unit_vertical_offset_value_label = Label.new()
+	unit_vertical_offset_value_label.custom_minimum_size.x = 48.0
+	unit_vertical_offset_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	controls.add_child(unit_vertical_offset_value_label)
+
+	var reset_button := Button.new()
+	reset_button.name = "ResetUnitVisualSettingsButton"
+	reset_button.text = "Reset"
+	reset_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	reset_button.pressed.connect(_on_reset_unit_visual_settings)
+	rows.add_child(reset_button)
+	_refresh_unit_visual_settings_labels()
+
+
+func _on_unit_size_changed(value: float) -> void:
+	unit_size_multiplier = value
+	_refresh_unit_visual_settings_labels()
+	unit_visual_settings_changed.emit(unit_size_multiplier, unit_vertical_offset)
+
+
+func _on_unit_vertical_offset_changed(value: float) -> void:
+	unit_vertical_offset = value
+	_refresh_unit_visual_settings_labels()
+	unit_visual_settings_changed.emit(unit_size_multiplier, unit_vertical_offset)
+
+
+func _on_reset_unit_visual_settings() -> void:
+	unit_size_slider.value = 1.0
+	unit_vertical_offset_slider.value = 0.0
+
+
+func _refresh_unit_visual_settings_labels() -> void:
+	if unit_size_value_label != null:
+		unit_size_value_label.text = "%d%%" % roundi(unit_size_multiplier * 100.0)
+	if unit_vertical_offset_value_label != null:
+		unit_vertical_offset_value_label.text = "%+d px" % roundi(unit_vertical_offset)
 
 
 func focus_unit(unit: Unit) -> void:

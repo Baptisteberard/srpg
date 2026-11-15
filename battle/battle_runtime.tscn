@@ -42,10 +42,10 @@ offset_bottom = 23.0
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -140.0
-offset_top = 40.0
-offset_right = -90.0
-offset_bottom = 90.0
+offset_left = -156.0
+offset_top = 170.0
+offset_right = -16.0
+offset_bottom = 216.0
 grow_horizontal = 0
 text = "End Turn"
 

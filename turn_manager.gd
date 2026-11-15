@@ -53,6 +53,8 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var grid_navigator = GridNavigatorScript.new()
 var combat_resolver = CombatResolverScript.new()
 var enemy_ai = EnemyAIScript.new()
+var unit_visual_size_multiplier: float = 1.0
+var unit_visual_vertical_offset: float = 0.0
 
 @export var highlight_path: NodePath
 var highlight: HighlightMap
@@ -180,6 +182,7 @@ func _add_unit(faction: Unit.Faction, cell: Vector2i, tex: Texture2D, definition
 		if definition.display_name.strip_edges() == "":
 			u.set_display_name(auto_name)
 	u.set_tile_size(board.tile_set.tile_size)
+	u.set_visual_settings(unit_visual_size_multiplier, unit_visual_vertical_offset)
 	if definition == null \
 	or (definition.texture == null and definition.fe8_map_sprite_animation == null):
 		u.set_texture(tex)
@@ -201,6 +204,15 @@ func _add_unit(faction: Unit.Faction, cell: Vector2i, tex: Texture2D, definition
 		player_units.append(u)
 	else:
 		enemy_units.append(u)
+
+func set_unit_visual_settings(size_multiplier: float, vertical_offset: float) -> void:
+	unit_visual_size_multiplier = clampf(size_multiplier, 0.5, 2.0)
+	unit_visual_vertical_offset = clampf(vertical_offset, -64.0, 64.0)
+	var all_units: Array[Unit] = player_units.duplicate()
+	all_units.append_array(enemy_units)
+	for unit in all_units:
+		if unit != null and is_instance_valid(unit):
+			unit.set_visual_settings(unit_visual_size_multiplier, unit_visual_vertical_offset)
 
 func _start_player_phase() -> void:
 	highlight.clear_cells()

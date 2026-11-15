@@ -51,6 +51,8 @@ var sprite: AnimatedSprite2D = null
 var fe8_map_sprite_animation: FE8MapSpriteAnimation = null
 var is_selected_visual: bool = false
 var is_hovered_visual: bool = false
+var visual_size_multiplier: float = 1.0
+var visual_vertical_offset: float = 0.0
 
 func _ready() -> void:
 	add_to_group("units")
@@ -152,6 +154,11 @@ func set_tile_size(tile_size: Vector2i) -> void:
 		tile_size_px = Vector2(tile_size)
 	_refresh_visual_scale()
 	queue_redraw()
+
+func set_visual_settings(size_multiplier: float, vertical_offset: float) -> void:
+	visual_size_multiplier = clampf(size_multiplier, 0.5, 2.0)
+	visual_vertical_offset = clampf(vertical_offset, -64.0, 64.0)
+	_refresh_visual_scale()
 
 func is_alive() -> bool:
 	return current_hp > 0
@@ -255,9 +262,12 @@ func _refresh_visual_scale() -> void:
 			maxf(1.0, minf(tile_size_px.x, tile_size_px.y) / float(FE8MapSpriteAnimation.FRAME_SIZE.x))
 			* FE8_DISPLAY_SCALE_MULTIPLIER
 		)
+	base_scale *= visual_size_multiplier
 	if is_selected_visual:
 		base_scale *= 1.15
-	_get_sprite().scale = Vector2.ONE * base_scale
+	var unit_sprite := _get_sprite()
+	unit_sprite.scale = Vector2.ONE * base_scale
+	unit_sprite.position.y = visual_vertical_offset
 
 func _play_stationary_visual() -> void:
 	if not has_fe8_map_sprite_animation():
