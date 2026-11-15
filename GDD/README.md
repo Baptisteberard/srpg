@@ -248,15 +248,15 @@ Base Attack Speed = 50
 
 Current weapon catalog values:
 
-| Weapon | Type | Damage | Weight | Range |
-| --- | --- | ---: | ---: | ---: |
-| Basic Sword | Sword | 5 | 4 | 1 |
-| Basic Axe | Axe | 7 | 7 | 1 |
-| Basic Spear | Spear | 6 | 5 | 1–2 |
-| Mace | Mace | 6 | 6 | 1 |
-| Dagger | Dagger | 3 | 1 | 1 |
-| Longbow | Bow | 5 | 4 | 2–3 |
-| War Hammer | Hammer | 8 | 8 | 1 |
+| Weapon | Type | Damage | Weight | Range | Base Hit | Base Crit |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Basic Sword | Sword | 5 | 4 | 1 | 90 | 5 |
+| Basic Axe | Axe | 7 | 7 | 1 | 75 | 0 |
+| Basic Spear | Spear | 6 | 5 | 1–2 | 85 | 5 |
+| Mace | Mace | 6 | 6 | 1 | 80 | 0 |
+| Dagger | Dagger | 3 | 1 | 1 | 95 | 10 |
+| Longbow | Bow | 5 | 4 | 2–3 | 85 | 5 |
+| War Hammer | Hammer | 8 | 8 | 1 | 70 | 0 |
 
 Weights are abstract balance values, not kilograms.
 

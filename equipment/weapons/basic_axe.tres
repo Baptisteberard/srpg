@@ -9,5 +9,7 @@ weapon_type = &"Axe"
 description = "A practical single-handed battle axe."
 damage = 7
 weight = 7
+base_hit = 75
+base_crit = 0
 minimum_range = 1
 maximum_range = 1

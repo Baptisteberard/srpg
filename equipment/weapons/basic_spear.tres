@@ -9,5 +9,7 @@ weapon_type = &"Spear"
 description = "A common thrusting spear with useful reach."
 damage = 6
 weight = 5
+base_hit = 85
+base_crit = 5
 minimum_range = 1
 maximum_range = 2

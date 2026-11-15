@@ -51,6 +51,7 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 	var characteristics_label := battle.find_child("CharacteristicsLabel", true, false) as RichTextLabel
 	var equipment_label := battle.find_child("EquipmentLabel", true, false) as RichTextLabel
 	var skills_label := battle.find_child("SkillsLabel", true, false) as RichTextLabel
+	var skill_action_button := battle.find_child("SkillActionButton", true, false) as Button
 	var progression_panel := battle.find_child("ProgressionPanel", true, false) as PanelContainer
 	var progression_label := battle.find_child("ProgressionLabel", true, false) as RichTextLabel
 	var settings_toggle := battle.find_child("UnitVisualSettingsToggle", true, false) as Button
@@ -117,6 +118,59 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 			and equipment_label.text.contains(focused_unit.equipped_armor.display_name) \
 			and not skills_label.text.is_empty()
 	_expect(unit_tabs_work, "%s shows one unit window with three information tabs" % scene_path)
+	if scene_path == "res://game.tscn" and manager != null and board != null:
+		var forest_cell := Vector2i(9999, 9999)
+		var open_cell := Vector2i(9999, 9999)
+		for board_cell in board.get_used_cells():
+			if board.is_forest(board_cell) and forest_cell.x == 9999:
+				forest_cell = board_cell
+			elif not board.is_forest(board_cell) and open_cell.x == 9999:
+				open_cell = board_cell
+		var terrain_unit: Unit = manager.player_units[0]
+		var original_cell := terrain_unit.cell
+		terrain_unit.cell = open_cell
+		var open_evasion := terrain_unit.get_evasion()
+		terrain_unit.cell = forest_cell
+		var forest_evasion := terrain_unit.get_evasion()
+		terrain_unit.cell = original_cell
+		var terrain_attacker := Unit.new()
+		var terrain_defender := Unit.new()
+		terrain_attacker.set_stats(20, 5, 5, 10, 0, 0)
+		terrain_attacker.equip_weapon(EquipmentCatalog.BASIC_AXE)
+		terrain_defender.set_stats(20, 5, 5, 0, 0, 0)
+		terrain_defender.combat_board = board
+		terrain_defender.cell = open_cell
+		var open_hit := terrain_attacker.get_hit_chance_against(terrain_defender)
+		terrain_defender.cell = forest_cell
+		var forest_hit := terrain_attacker.get_hit_chance_against(terrain_defender)
+		_expect(
+			forest_cell.x != 9999 and open_cell.x != 9999 \
+				and board.get_terrain_avoid(forest_cell) == Board.FOREST_AVOID \
+				and forest_evasion == open_evasion + Board.FOREST_AVOID \
+				and forest_hit == open_hit - Board.FOREST_AVOID,
+			"Map 1 forest tiles grant +%d Evasion" % Board.FOREST_AVOID
+		)
+		terrain_attacker.free()
+		terrain_defender.free()
+
+	var self_heal_works := false
+	if manager != null and hud != null and unit_info_tabs != null and skill_action_button != null \
+	and not manager.player_units.is_empty():
+		var healer: Unit = manager.player_units[0]
+		healer.take_damage(8)
+		var hp_before_heal := healer.current_hp
+		manager._select_unit(healer)
+		hud.focus_unit(healer)
+		unit_info_tabs.current_tab = 2
+		await process_frame
+		var expected_healing := healer.get_healing_amount(SkillCatalog.HEAL)
+		skill_action_button.pressed.emit()
+		await process_frame
+		self_heal_works = healer.has_active_skill(SkillCatalog.HEAL) \
+			and skill_action_button.visible \
+			and healer.current_hp == mini(healer.health, hp_before_heal + expected_healing) \
+			and healer.has_acted
+	_expect(self_heal_works, "%s lets the primary player use Heal on self and spend the action" % scene_path)
 	var progression_ui_works := false
 	if hud != null \
 	and manager != null \
@@ -340,9 +394,35 @@ func _test_equipment() -> void:
 	_expect(
 		attacker.get_physical_damage() == 15 \
 		and defender.get_armor_value() == 10 \
-		and attacker.get_physical_damage_against(defender) == 5,
+		and attacker.get_physical_damage_against(defender) == 5 \
+		and attacker.get_physical_damage_against(defender, true) == 10,
 		"Weapon damage adds to Strength and Armor reduces final damage"
 	)
+	var accuracy_target := Unit.new()
+	accuracy_target.set_stats(20, 5, 5, 0, 0, 0)
+	attacker.set_stats(20, 10, 10, 40, 3, 0)
+	attacker.equip_weapon(EquipmentCatalog.DAGGER)
+	attacker.flat_hit_modifier = -5
+	attacker.flat_crit_modifier = 3
+	accuracy_target.flat_evasion_modifier = 2
+	_expect(
+		attacker.get_accuracy() == 130 \
+		and attacker.get_hit_chance_against(accuracy_target) == 95 \
+		and attacker.get_critical_chance_against(accuracy_target) == 16,
+		"Accuracy and critical chance use weapon bases, Dexterity, target Evasion, and their clamps"
+	)
+	attacker.current_hp = 10
+	_expect(
+		attacker.get_healing_amount(SkillCatalog.HEAL) == 8 \
+		and attacker.heal(attacker.get_healing_amount(SkillCatalog.HEAL)) == 8 \
+		and attacker.current_hp == 18,
+		"Heal restores Intellect plus Skill Healing Power without exceeding maximum HP"
+	)
+	accuracy_target.free()
+	attacker.set_stats(20, 10, 10, 80, 0, 0)
+	attacker.flat_hit_modifier = 0
+	attacker.flat_crit_modifier = 0
+	attacker.equip_weapon(EquipmentCatalog.BASIC_SWORD)
 	attacker.faction = Unit.Faction.PLAYER
 	defender.faction = Unit.Faction.ENEMY
 	attacker.cell = Vector2i.ZERO

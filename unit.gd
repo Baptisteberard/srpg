@@ -33,6 +33,8 @@ const EXPERIENCE_PER_LEVEL: int = 100
 @export_group("Equipment")
 @export var equipped_weapon: WeaponDefinition
 @export var equipped_armor: ArmorDefinition
+@export_group("Skills")
+@export var active_skills: Array[SkillDefinition] = []
 @export_group("Growth Rates")
 @export_range(0, 300, 1) var health_growth_rate: int = 60
 @export_range(0, 300, 1) var strength_growth_rate: int = 40
@@ -42,6 +44,9 @@ const EXPERIENCE_PER_LEVEL: int = 100
 @export_group("Combat")
 @export var minimum_attack_range: int = 1
 @export var attack_range: int = 1
+@export var flat_hit_modifier: int = 0
+@export var flat_crit_modifier: int = 0
+@export var flat_evasion_modifier: int = 0
 @export var attack_lunge_time: float = 0.08
 @export var attack_return_time: float = 0.12
 @export_range(0.05, 2.0, 0.01) var death_fade_time: float = 0.45
@@ -52,6 +57,7 @@ const EXPERIENCE_PER_LEVEL: int = 100
 
 var current_hp: int = -1
 var tile_size_px: Vector2 = Vector2(64.0, 64.0)
+var combat_board: Board
 
 func blocks_movement_for(mover_faction: Faction) -> bool:
 	# If mover is same faction => "ally"
@@ -138,8 +144,12 @@ func apply_definition(definition: UnitStats, reset_current_hp: bool = true) -> v
 	move_range = maxi(0, definition.move_range)
 	minimum_attack_range = maxi(1, definition.minimum_attack_range)
 	attack_range = maxi(1, definition.attack_range)
+	flat_hit_modifier = definition.flat_hit_modifier
+	flat_crit_modifier = definition.flat_crit_modifier
+	flat_evasion_modifier = definition.flat_evasion_modifier
 	equip_weapon(definition.equipped_weapon)
 	equip_armor(definition.equipped_armor)
+	active_skills = definition.active_skills.duplicate()
 	blocks_allies = definition.blocks_allies
 	blocks_enemies = definition.blocks_enemies
 	attack_lunge_time = maxf(0.0, definition.attack_lunge_time)
@@ -307,22 +317,63 @@ func get_weight_penalty() -> int:
 func get_battle_speed() -> int:
 	return maxi(0, speed - get_weight_penalty())
 
-func get_evasion() -> int:
-	# Terrain Avoid will be added when terrain combat bonuses are implemented.
-	return get_battle_speed()
+func get_terrain_avoid(at_cell: Vector2i = cell) -> int:
+	return 0 if combat_board == null else combat_board.get_terrain_avoid(at_cell)
+
+func get_evasion(at_cell: Vector2i = cell) -> int:
+	return maxi(0, get_battle_speed() + get_terrain_avoid(at_cell) + flat_evasion_modifier)
+
+func get_weapon_base_hit() -> int:
+	return 0 if equipped_weapon == null else equipped_weapon.base_hit
+
+func get_weapon_base_crit() -> int:
+	return 0 if equipped_weapon == null else equipped_weapon.base_crit
+
+func get_accuracy() -> int:
+	return get_weapon_base_hit() + dexterity + flat_hit_modifier
 
 func get_physical_damage() -> int:
 	return strength + get_weapon_damage()
 
-func get_physical_damage_against(target: Unit) -> int:
+func get_physical_damage_against(target: Unit, is_critical: bool = false) -> int:
 	if target == null:
 		return 0
-	return maxi(0, get_physical_damage() - target.get_armor_value())
+	var final_damage := maxi(0, get_physical_damage() - target.get_armor_value())
+	return final_damage * 2 if is_critical else final_damage
 
 func get_hit_chance_against(target: Unit) -> int:
 	if target == null:
 		return 0
-	return clampi(dexterity - target.get_evasion(), 0, 100)
+	return clampi(get_accuracy() - target.get_evasion(), 5, 95)
+
+func get_critical_chance_against(target: Unit) -> int:
+	if target == null:
+		return 0
+	return clampi(
+		get_weapon_base_crit() + dexterity / 4 + flat_crit_modifier - target.get_evasion(),
+		0,
+		100
+	)
+
+func get_healing_amount(skill: SkillDefinition) -> int:
+	if skill == null or not skill.is_healing_skill():
+		return 0
+	var weapon_bonus := 0 if equipped_weapon == null else maxi(0, equipped_weapon.healing_bonus)
+	return maxi(1, intellect + weapon_bonus + maxi(0, skill.healing_power))
+
+func heal(amount: int) -> int:
+	if amount <= 0 or not is_alive():
+		return 0
+	var restored: int = mini(amount, health - current_hp)
+	if restored <= 0:
+		return 0
+	current_hp += restored
+	queue_redraw()
+	health_changed.emit(self)
+	return restored
+
+func has_active_skill(skill: SkillDefinition) -> bool:
+	return skill != null and active_skills.has(skill)
 
 func take_damage(amount: int) -> int:
 	if amount <= 0 or not is_alive():

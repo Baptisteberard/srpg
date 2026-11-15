@@ -4,6 +4,7 @@ class_name BattleHud
 signal damage_preview_changed(damage_by_unit: Dictionary)
 signal unit_visual_settings_changed(size_multiplier: float, vertical_offset: float)
 signal unit_animation_settings_changed(animation_speed_multiplier: float, movement_speed_multiplier: float)
+signal skill_requested(unit: Unit, skill: SkillDefinition)
 
 const MIN_UNIT_SIZE_MULTIPLIER: float = 0.5
 const MAX_UNIT_SIZE_MULTIPLIER: float = 2.0
@@ -29,6 +30,7 @@ var equipment_scroll: ScrollContainer
 var equipment_label: RichTextLabel
 var skills_scroll: ScrollContainer
 var skills_label: RichTextLabel
+var skill_action_button: Button
 var progression_panel: PanelContainer
 var progression_label: RichTextLabel
 var progression_timer: Timer
@@ -386,6 +388,7 @@ func refresh() -> void:
 		stats_label.text = ""
 		equipment_label.text = ""
 		skills_label.text = ""
+		_refresh_skill_action_button(null)
 		return
 
 	stats_panel.visible = true
@@ -439,6 +442,12 @@ func _build_stats_panel() -> void:
 	var skills_tab := _create_unit_info_tab("Skills", "SkillsLabel")
 	skills_scroll = skills_tab["scroll"] as ScrollContainer
 	skills_label = skills_tab["label"] as RichTextLabel
+	skill_action_button = Button.new()
+	skill_action_button.name = "SkillActionButton"
+	skill_action_button.visible = false
+	skill_action_button.pressed.connect(_on_skill_action_pressed)
+	unit_info_layout.add_child(skill_action_button)
+	stats_tabs.tab_changed.connect(_on_unit_info_tab_changed)
 	stats_tabs.current_tab = 0
 
 
@@ -569,6 +578,7 @@ func _refresh_unit_window(unit: Unit) -> void:
 	stats_label.text = _build_characteristics_text(unit)
 	equipment_label.text = _build_equipment_text(unit)
 	skills_label.text = _build_skills_text(unit)
+	_refresh_skill_action_button(unit)
 
 
 func _strip_bbcode_tags(text_value: String) -> String:
@@ -596,13 +606,15 @@ func _build_characteristics_text(unit: Unit) -> String:
 func _build_equipment_text(unit: Unit) -> String:
 	var weapon_text := "None"
 	if unit.equipped_weapon != null:
-		weapon_text = "%s (%s)\nDamage: +%d | Weight: %d | Range: %d–%d" % [
+		weapon_text = "%s (%s)\nDamage: +%d | Weight: %d | Range: %d–%d\nBase Hit: %d%% | Base Crit: %d%%" % [
 			unit.equipped_weapon.display_name,
 			str(unit.equipped_weapon.weapon_type),
 			unit.equipped_weapon.damage,
 			unit.equipped_weapon.weight,
 			unit.minimum_attack_range,
 			unit.attack_range,
+			unit.equipped_weapon.base_hit,
+			unit.equipped_weapon.base_crit,
 		]
 
 	var armor_text := "None"
@@ -627,9 +639,48 @@ func _build_skills_text(unit: Unit) -> String:
 	var attack_name := "Unarmed Attack"
 	if unit.equipped_weapon != null:
 		attack_name = "%s Attack" % str(unit.equipped_weapon.weapon_type)
-	return "[b]Weapon Attack[/b]\n%s\nPhysical Power: %d (Strength %d + Weapon %d)\n\n[b]Active Skills[/b]\nNone\n\n[b]Passive Skills[/b]\nNone" % [
+	var active_lines: Array[String] = []
+	for skill in unit.active_skills:
+		if skill != null and skill.is_healing_skill():
+			active_lines.append("%s: Heal self for %d HP (cannot miss or crit)" % [
+				skill.display_name,
+				unit.get_healing_amount(skill),
+			])
+	var active_text := "None" if active_lines.is_empty() else "\n".join(active_lines)
+	return "[b]Weapon Attack[/b]\n%s\nPhysical Power: %d (Strength %d + Weapon %d)\nAccuracy: %d | Base Crit: %d%%\n\n[b]Active Skills[/b]\n%s\n\n[b]Passive Skills[/b]\nNone" % [
 		attack_name,
 		unit.get_physical_damage(),
 		unit.strength,
 		unit.get_weapon_damage(),
+		unit.get_accuracy(),
+		unit.get_weapon_base_crit(),
+		active_text,
 	]
+
+func _on_unit_info_tab_changed(_tab: int) -> void:
+	_refresh_skill_action_button(focused_unit)
+
+func _refresh_skill_action_button(unit: Unit) -> void:
+	if skill_action_button == null:
+		return
+	var heal_skill: SkillDefinition = null
+	if unit != null and is_instance_valid(unit):
+		for skill in unit.active_skills:
+			if skill != null and skill.is_healing_skill():
+				heal_skill = skill
+				break
+	var on_skills_tab := stats_tabs != null and stats_tabs.current_tab == 2
+	var is_player := unit != null and is_instance_valid(unit) and unit.faction == Unit.Faction.PLAYER
+	skill_action_button.visible = on_skills_tab and heal_skill != null and is_player
+	if not skill_action_button.visible:
+		return
+	skill_action_button.text = "Use %s on self" % heal_skill.display_name
+	skill_action_button.disabled = unit.has_acted or unit.current_hp >= unit.health
+	skill_action_button.set_meta("skill", heal_skill)
+
+func _on_skill_action_pressed() -> void:
+	if focused_unit == null or not is_instance_valid(focused_unit):
+		return
+	var skill := skill_action_button.get_meta("skill", null) as SkillDefinition
+	if skill != null:
+		skill_requested.emit(focused_unit, skill)

@@ -2,6 +2,8 @@
 extends TileMapLayer
 class_name Board
 
+const FOREST_AVOID: int = 20
+
 signal cell_clicked(cell: Vector2i)
 
 var used_rect: Rect2i = Rect2i()
@@ -39,6 +41,30 @@ func is_blocked(cell: Vector2i) -> bool:
 	if td == null:
 		return true
 	return bool(td.get_custom_data("blocked"))
+
+func is_forest(cell: Vector2i) -> bool:
+	if _cell_uses_tree_atlas(self, cell):
+		return true
+	var map_root := get_parent()
+	if map_root == null:
+		return false
+	for candidate in map_root.find_children("*", "TileMapLayer", true, false):
+		var layer := candidate as TileMapLayer
+		if layer != null and layer != self and _cell_uses_tree_atlas(layer, cell):
+			return true
+	return false
+
+func _cell_uses_tree_atlas(layer: TileMapLayer, cell: Vector2i) -> bool:
+	var source_id: int = layer.get_cell_source_id(cell)
+	if source_id < 0 or layer.tile_set == null or not layer.tile_set.has_source(source_id):
+		return false
+	var atlas := layer.tile_set.get_source(source_id) as TileSetAtlasSource
+	if atlas == null or atlas.texture == null:
+		return false
+	return atlas.texture.resource_path.get_file().to_lower().contains("tree")
+
+func get_terrain_avoid(cell: Vector2i) -> int:
+	return FOREST_AVOID if is_forest(cell) else 0
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton \

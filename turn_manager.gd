@@ -81,6 +81,8 @@ func _ready() -> void:
 	if hud == null or hud.get_script() != BattleHudScript:
 		push_error("TurnManager: hud_path is not set to the shared BattleHud node.")
 		return
+	if not hud.skill_requested.is_connected(_on_skill_requested):
+		hud.skill_requested.connect(_on_skill_requested)
 	highlight = get_node_or_null(highlight_path) as HighlightMap
 	if highlight != null:
 		highlight.configure_from_board(board)
@@ -201,6 +203,7 @@ func _add_unit(faction: Unit.Faction, cell: Vector2i, tex: Texture2D, definition
 		elif board_parent is Node2D and (board_parent as Node2D).y_sort_enabled:
 			world_parent = board_parent
 	world_parent.add_child(u)
+	u.combat_board = board
 	u.set_cell(cell, board.cell_to_world(cell))
 	occ[cell] = u
 
@@ -585,6 +588,21 @@ func _pick_adjacent_opponent(attacker: Unit) -> Unit:
 
 func _resolve_attack(attacker: Unit, defender: Unit) -> void:
 	await combat_resolver.resolve(attacker, defender)
+
+func _on_skill_requested(unit: Unit, skill: SkillDefinition) -> void:
+	if phase != Phase.PLAYER or _is_busy():
+		return
+	if unit == null or not is_instance_valid(unit) or unit != selected:
+		return
+	if unit.has_acted or not unit.is_alive() or not unit.has_active_skill(skill):
+		return
+	if skill == null or not skill.is_healing_skill() or unit.current_hp >= unit.health:
+		return
+	action_state = ActionState.COMBAT
+	unit.heal(unit.get_healing_amount(skill))
+	_finish_selected_action()
+	_refresh_stats_panel()
+	action_state = ActionState.IDLE
 
 func _remove_unit(u: Unit, victor: Unit = null) -> void:
 	if u == null:

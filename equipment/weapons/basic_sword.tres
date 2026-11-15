@@ -9,5 +9,7 @@ weapon_type = &"Sword"
 description = "A simple one-handed arming sword."
 damage = 5
 weight = 4
+base_hit = 90
+base_crit = 5
 minimum_range = 1
 maximum_range = 1

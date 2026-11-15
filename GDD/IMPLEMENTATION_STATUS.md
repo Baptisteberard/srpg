@@ -17,14 +17,14 @@ Status meanings:
 | Health | Implemented | Maximum and current HP, damage, HP bars, and defeat are functional. |
 | Strength | Partial | Adds to physical Weapon Damage and offsets equipped weight. Other Strength requirements and modifiers are not implemented. |
 | Speed | Partial | Feeds Battle Speed after the equipped-weight penalty. Its future Attack Speed role is not implemented. |
-| Dexterity | Partial | Canonically named `dexterity` and used for hit chance. Critical, Block, and Parry effects are not implemented. |
+| Dexterity | Partial | Used by accuracy and critical chance. Block and Parry effects are not implemented. |
 | Intellect | Partial | Stored and displayed, but has no magical-damage or healing behavior. |
 | Armor | Partial | Equipped Armor reduces physical damage. Magical damage is not implemented, and the legacy base Armor field remains for compatibility. |
 | Five personal growth rates | Implemented | Health, Strength, Speed, Dexterity, and Intellect rates are editable, displayed, and rolled independently. |
 | Unit name and class header | Implemented | The focused unit's individual name and displayed class appear above the tabs. |
 | Characteristics tab | Implemented | Shows only the five characteristics and their growth rates. |
 | Equipment tab | Partial | Displays the equipped weapon, armor, damage, protection, range, weight, Weight Penalty, and Battle Speed. Inventory management, shields, and requirements do not exist. |
-| Skills tab | Partial | Displays the equipped weapon's hard-coded Weapon Attack calculation; data-driven skills do not exist. |
+| Skills tab | Partial | Displays the equipped Weapon Attack and data-driven active skills. The primary Recruit can use the self-target Heal skill; a general targeting interface does not exist. |
 
 ## Weight and derived combat values
 
@@ -33,7 +33,7 @@ Status meanings:
 | Equipment Total Weight | Partial | Equipped weapon and armor weight are summed. Shield and accessory weight await those systems. |
 | Strength reducing Weight Penalty | Implemented | `max(0, Total Weight - Strength)` is used at runtime. |
 | Battle Speed | Implemented | `max(0, Speed - Weight Penalty)` is used for current evasion and legacy initiative. |
-| Terrain Avoid and final Evasion | Partial | Evasion currently equals Battle Speed; terrain bonuses are not implemented. |
+| Terrain Avoid and final Evasion | Partial | Forest tiles grant +20 Avoid, and final Evasion includes Battle Speed, Terrain Avoid, and flat modifiers. Other terrain types have no Avoid values yet. |
 | Attack Speed formula | Not implemented | Weapon skills do not yet contain Base Attack Speed. |
 | Exact effect of Attack Speed | Undecided | No approved strike-order or follow-up rule exists. |
 
@@ -43,22 +43,22 @@ Status meanings:
 | --- | --- | --- |
 | Weapon-granted Weapon Attack | Partial | Equipped weapons supply the displayed attack name, damage, weight, and range, but the attack remains hard-coded rather than a granted skill resource. |
 | Automatic defensive Weapon Attack | Partial | Legacy reciprocal attacks exist, but their behavior is not the approved target rule. Exact target timing remains undecided. |
-| GDD hit formula | Partial | Current formula is `dexterity - target Battle Speed`; it does not yet use Skill Base Hit, terrain, or flat modifiers. |
+| GDD hit formula | Implemented | Weapon Attacks use `clamp(Base Hit + Dexterity + flat Hit - target Evasion, 5, 95)`, including forest Avoid. |
 | Cannot-miss property | Not implemented | No skill property system exists. |
-| Critical chance formula | Not implemented | No critical roll exists. Target formula subtracts Evasion after adding Base Crit and `floor(Dexterity / 4)`. |
-| Critical damage | Not implemented | The proposed `2 × Final Damage` remains an initial tuning value. |
+| Critical chance formula | Implemented | After a hit, Weapon Attacks roll `clamp(Base Crit + floor(Dexterity / 4) + flat Crit - target Evasion, 0, 100)`. |
+| Critical damage | Implemented | Critical Weapon Attacks deal `2 × Final Damage`, after Armor reduction. |
 | Physical formula | Partial | Strength, Weapon Damage, and target Armor are implemented. Skill Power and flat modifiers do not exist. |
 | Magical formula | Not implemented | Intellect and magical actions have no combat implementation. |
 | Single Armor defense | Partial | Armor reduces physical damage. Magical attacks do not exist yet, so magical mitigation is not exercised. |
-| Healing formula | Not implemented | No healing action exists. |
+| Healing formula | Implemented | The self-target Heal skill restores `max(1, Intellect + Weapon Healing Bonus + Skill Healing Power)`, cannot miss or crit, and is capped at maximum HP. |
 | Shared forecast and resolution math | Partial | Forecast and resolution share equipped physical-power, Armor, and range calculations. The full skill pipeline is not implemented. |
-| Strike resolution pipeline | Partial | Hit roll, equipped physical damage, Armor reduction, HP loss, and defeat exist. Critical, Block, Parry, and general skill modifiers do not. |
+| Strike resolution pipeline | Partial | Hit and critical rolls, equipped physical damage, Armor reduction, HP loss, healing, and defeat exist. Block, Parry, and a general effect pipeline do not. |
 
 ## Equipment
 
 | GDD feature | Status | Current prototype |
 | --- | --- | --- |
-| Weapon slot and weapon data | Partial | Seven weapon resources provide type, damage, weight, and range. Base hit, crit, attack speed, requirements, and granted skill resources remain. |
+| Weapon slot and weapon data | Partial | Seven weapon resources provide type, damage, weight, range, Base Hit, and Base Crit. Attack speed, requirements, and granted skill resources remain. |
 | Armor slot and armor data | Partial | Six armor resources provide historical type, Armor value, and weight. Requirements and inventory management remain. |
 | Shield or off-hand slot | Not implemented | No shield item or off-hand system exists. |
 | Accessories | Not implemented | Reserved as a future extension. |

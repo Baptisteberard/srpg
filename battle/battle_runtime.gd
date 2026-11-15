@@ -3,6 +3,7 @@ class_name BattleRuntime
 
 const UnitDefinitionScript = preload("res://units/unit_definition.gd")
 const EquipmentCatalogScript = preload("res://equipment/equipment_catalog.gd")
+const SkillCatalogScript = preload("res://skills/skill_catalog.gd")
 
 @export var player_unit_count: int = 1
 @export var enemy_unit_count: int = 1
@@ -85,6 +86,7 @@ func _apply_recruit_loadout(definition: UnitStats, loadout_index: int) -> void:
 		0:
 			definition.equipped_weapon = EquipmentCatalogScript.BASIC_SWORD
 			definition.equipped_armor = EquipmentCatalogScript.MAIL_HAUBERK
+			definition.active_skills = [SkillCatalogScript.HEAL]
 		1:
 			definition.equipped_weapon = EquipmentCatalogScript.LONGBOW
 			definition.equipped_armor = EquipmentCatalogScript.BRIGANDINE

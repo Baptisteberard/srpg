@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SkillDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://skills/skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+display_name = "Heal"
+description = "Restore the user's own HP. Cannot miss or critically heal."
+effect_type = 0
+target_type = 0
+healing_power = 5
+cannot_miss = true
+cannot_crit = true

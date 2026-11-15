@@ -16,7 +16,7 @@ highlights, HP overlay, HUD, unit scene, and battle controller.
 
 | Component | Responsibility |
 | --- | --- |
-| `Board` | Tile bounds, blocked terrain, coordinate conversion, and cell clicks |
+| `Board` | Tile bounds, blocked terrain, forest Avoid classification, coordinate conversion, and cell clicks |
 | `BattleRuntime` | Shared battle-scene composition and encounter configuration |
 | `TurnManager` | Turn orchestration, player commands, selection, and occupancy |
 | `GridNavigator` | Reachability and shortest-path calculations |
@@ -30,6 +30,8 @@ highlights, HP overlay, HUD, unit scene, and battle controller.
 | `WeaponDefinition` | Reusable weapon type, damage, weight, and range data |
 | `ArmorDefinition` | Reusable medieval armor type, protection, and weight data |
 | `EquipmentCatalog` | Shared catalog of prototype weapon and armor resources |
+| `SkillDefinition` | Reusable active-skill targeting and effect data |
+| `SkillCatalog` | Shared catalog containing the baseline self-target Heal skill |
 | `FE8MapSpriteImporter` | Optional local extraction, transparency, and faction-palette conversion for the FE8 reference sheet |
 | `FE8MapSpriteAnimation` | Explicit FE8 dual-idle and four-direction movement animation data; right movement mirrors the side sequence |
 

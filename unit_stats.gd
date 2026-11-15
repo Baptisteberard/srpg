@@ -23,6 +23,9 @@ class_name UnitStats
 @export var equipped_weapon: WeaponDefinition
 @export var equipped_armor: ArmorDefinition
 
+@export_group("Skills")
+@export var active_skills: Array[SkillDefinition] = []
+
 @export_group("Growth Rates")
 @export_range(0, 300, 1) var health_growth_rate: int = 60
 @export_range(0, 300, 1) var strength_growth_rate: int = 40
@@ -38,6 +41,9 @@ class_name UnitStats
 @export_group("Combat")
 @export var minimum_attack_range: int = 1
 @export var attack_range: int = 1
+@export var flat_hit_modifier: int = 0
+@export var flat_crit_modifier: int = 0
+@export var flat_evasion_modifier: int = 0
 @export var attack_lunge_time: float = 0.08
 @export var attack_return_time: float = 0.12
 

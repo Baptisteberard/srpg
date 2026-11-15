@@ -14,6 +14,8 @@ static func forecast(attacker: Unit, defender: Unit, attacker_cell: Vector2i) ->
 		"attacker_strikes_first": true,
 		"attacker_hp_after": 0,
 		"defender_hp_after": 0,
+		"attacker_hit": 0,
+		"attacker_crit": 0,
 	}
 	if attacker == null or defender == null:
 		return result
@@ -27,6 +29,8 @@ static func forecast(attacker: Unit, defender: Unit, attacker_cell: Vector2i) ->
 	var defender_can: bool = _can_attack_from_cell(defender, defender.cell, attacker_cell)
 	result["can_attack"] = attacker_can
 	result["defender_can_counter"] = defender_can
+	result["attacker_hit"] = attacker.get_hit_chance_against(defender)
+	result["attacker_crit"] = attacker.get_critical_chance_against(defender)
 	if not attacker_can:
 		return result
 
@@ -90,9 +94,12 @@ func _perform_strike(attacker: Unit, defender: Unit) -> void:
 	if not is_instance_valid(attacker) or not is_instance_valid(defender):
 		return
 
-	var random_roll: int = rng.randi_range(1, 100) if rng != null else 1
-	if random_roll <= attacker.get_hit_chance_against(defender):
-		defender.take_damage(attacker.get_physical_damage_against(defender))
+	var hit_roll: int = rng.randi_range(1, 100) if rng != null else 1
+	if hit_roll <= attacker.get_hit_chance_against(defender):
+		var critical_roll: int = rng.randi_range(1, 100) if rng != null else 100
+		var is_critical := critical_roll <= attacker.get_critical_chance_against(defender)
+		var damage: int = attacker.get_physical_damage_against(defender, is_critical)
+		defender.take_damage(damage)
 		if not defender.is_alive():
 			unit_defeated.emit(defender, attacker)
 	combat_state_changed.emit()
