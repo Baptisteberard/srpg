@@ -56,8 +56,9 @@ cannot be lower than `0%` or higher than `100%`.
 | Dexterity | Increases accuracy, critical chance, block, and parry |
 | Intellect | Increases magical damage and healing |
 
-`Dexterity` replaces the prototype name `Precision`. Armor is not a permanent
-characteristic: it is primarily derived from equipment, class, and effects.
+Dexterity is the canonical stat name in both the GDD and the code. Armor is not
+a permanent characteristic: it is primarily derived from equipment, class, and
+effects.
 
 Temporary bonuses do not satisfy class or equipment requirements. Requirements
 use permanent characteristics after permanent level-up gains.
@@ -423,7 +424,8 @@ Illustrative requirements, pending starting-stat balance:
 
 ## Initial implementation plan
 
-1. Rename `Precision` to `Dexterity` and centralize derived-stat formulas.
+1. Centralize derived-stat formulas around Dexterity and the other canonical
+   characteristic names.
 2. Add equipment resources, requirements, weight, and Armor.
 3. Replace direct strikes with data-driven Weapon Attacks and a shared forecast.
 4. Add critical hits, Block, Parry, and passive modifiers.
@@ -446,7 +448,7 @@ These values need playtesting before they become final:
 
 ## Current prototype gap
 
-The current code implements HP, Strength, Speed, `Precision`, Intellect, Armor,
+The current code implements HP, Strength, Speed, Dexterity, Intellect, Armor,
 basic hit rolls, and data fields for a displayed class name and five growth
 rates. It does not yet implement the formulas in this document for weight,
 equipment, Armor mitigation, critical hits, skills, EXP, random level-up growth,

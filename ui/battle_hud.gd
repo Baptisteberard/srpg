@@ -514,7 +514,7 @@ func _build_characteristics_text(unit: Unit) -> String:
 		unit.strength_growth_rate,
 		unit.speed,
 		unit.speed_growth_rate,
-		unit.precision,
+		unit.dexterity,
 		unit.dexterity_growth_rate,
 		unit.intellect,
 		unit.intellect_growth_rate,

@@ -17,7 +17,7 @@ Status meanings:
 | Health | Implemented | Maximum and current HP, damage, HP bars, and defeat are functional. |
 | Strength | Partial | Stored and used as direct physical damage. Weapon damage and weight offset are not implemented. |
 | Speed | Partial | Stored and used by legacy combat behavior. GDD Battle Speed and weight interaction are not implemented. |
-| Dexterity | Partial | Still named `precision` internally and used for hit chance. Critical, Block, and Parry effects are not implemented. |
+| Dexterity | Partial | Canonically named `dexterity` and used for hit chance. Critical, Block, and Parry effects are not implemented. |
 | Intellect | Partial | Stored and displayed, but has no magical-damage or healing behavior. |
 | Armor | Partial | Stored and displayed in underlying unit data, but does not reduce damage yet. |
 | Five growth-rate fields | Partial | Health, Strength, Speed, Dexterity, and Intellect growth values exist and are displayed. Level-up rolls do not exist. |
@@ -43,7 +43,7 @@ Status meanings:
 | --- | --- | --- |
 | Weapon-granted Weapon Attack | Partial | Units have a hard-coded basic physical attack, but no weapon or granted-skill data. |
 | Automatic defensive Weapon Attack | Partial | Legacy reciprocal attacks exist, but their behavior is not the approved target rule. Exact target timing remains undecided. |
-| GDD hit formula | Not implemented | Current formula is `precision - target.speed`; it does not use Skill Base Hit, terrain, or GDD Evasion. |
+| GDD hit formula | Not implemented | Current formula is `dexterity - target.speed`; it does not use Skill Base Hit, terrain, or GDD Evasion. |
 | Cannot-miss property | Not implemented | No skill property system exists. |
 | Critical chance formula | Not implemented | No critical roll exists. Target formula subtracts Evasion after adding Base Crit and `floor(Dexterity / 4)`. |
 | Critical damage | Not implemented | The proposed `2 × Final Damage` remains an initial tuning value. |

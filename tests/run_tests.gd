@@ -261,7 +261,7 @@ func _test_combat_basics() -> void:
 	defender.cell = Vector2i.RIGHT
 
 	_expect(attacker.can_attack(defender), "Opposing adjacent units can attack")
-	_expect(attacker.get_hit_chance_against(defender) == 60, "Hit chance uses precision minus target speed")
+	_expect(attacker.get_hit_chance_against(defender) == 60, "Hit chance uses Dexterity minus target Speed")
 	var forecast: Dictionary = CombatResolver.forecast(attacker, defender, attacker.cell)
 	_expect(
 		not bool(forecast["attacker_strikes_first"]) \

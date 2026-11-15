@@ -21,7 +21,7 @@ const FE8_DISPLAY_SCALE_MULTIPLIER: float = 2.0
 @export var health: int = 20
 @export var strength: int = 12
 @export var speed: int = 0
-@export_range(0, 100, 1) var precision: int = 100
+@export_range(0, 100, 1) var dexterity: int = 100
 @export var intellect: int = 0
 @export var armor: int = 0
 @export_group("Growth Rates")
@@ -76,7 +76,7 @@ func _sanitize_stats() -> void:
 	health = maxi(1, health)
 	strength = maxi(0, strength)
 	speed = maxi(0, speed)
-	precision = clampi(precision, 0, 100)
+	dexterity = clampi(dexterity, 0, 100)
 	intellect = maxi(0, intellect)
 	armor = maxi(0, armor)
 	health_growth_rate = clampi(health_growth_rate, 0, 300)
@@ -85,11 +85,11 @@ func _sanitize_stats() -> void:
 	dexterity_growth_rate = clampi(dexterity_growth_rate, 0, 300)
 	intellect_growth_rate = clampi(intellect_growth_rate, 0, 300)
 
-func set_stats(health_value: int, strength_value: int, speed_value: int, precision_value: int, intellect_value: int, armor_value: int, reset_current_hp: bool = true) -> void:
+func set_stats(health_value: int, strength_value: int, speed_value: int, dexterity_value: int, intellect_value: int, armor_value: int, reset_current_hp: bool = true) -> void:
 	health = health_value
 	strength = strength_value
 	speed = speed_value
-	precision = precision_value
+	dexterity = dexterity_value
 	intellect = intellect_value
 	armor = armor_value
 	_sanitize_stats()
@@ -116,7 +116,7 @@ func apply_definition(definition: UnitStats, reset_current_hp: bool = true) -> v
 		definition.health,
 		definition.strength,
 		definition.speed,
-		definition.precision,
+		definition.dexterity,
 		definition.intellect,
 		definition.armor,
 		reset_current_hp
@@ -210,7 +210,7 @@ func get_physical_damage() -> int:
 func get_hit_chance_against(target: Unit) -> int:
 	if target == null:
 		return 0
-	return clampi(precision - target.speed, 0, 100)
+	return clampi(dexterity - target.speed, 0, 100)
 
 func take_damage(amount: int) -> int:
 	if amount <= 0 or not is_alive():
