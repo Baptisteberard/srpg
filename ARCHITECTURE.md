@@ -1,5 +1,8 @@
 # SRPG Architecture
 
+The target gameplay rules are maintained in [GDD/README.md](GDD/README.md).
+This file documents the current code architecture rather than future mechanics.
+
 ## Scene flow
 
 `main.tscn` owns the map-selection menu and instantiates the chosen map under
