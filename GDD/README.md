@@ -23,7 +23,7 @@ coherent prototype baseline, not final balance.
 | Derived stat | A combat value calculated from characteristics, equipment, terrain, and skills |
 | Base value | A value supplied by a weapon, skill, shield, class, or terrain |
 | Battle Speed | Effective Speed after equipment weight and modifiers |
-| Attack Speed | A skill's execution speed; used for strike order and follow-ups |
+| Attack Speed | A skill's execution-speed value; its exact combat effect is not decided yet |
 | Weapon Attack | The basic action automatically granted by the equipped weapon |
 
 All formulas use integer values. Division rounds down unless a rule explicitly
@@ -35,7 +35,7 @@ says otherwise. Percentage rolls use an inclusive `1–100` roll.
 | --- | --- |
 | Health (HP) | Increases maximum HP |
 | Strength | Increases physical damage and offsets equipment weight |
-| Speed | Increases Battle Speed, evasion, strike priority, and follow-up potential |
+| Speed | Increases Battle Speed, evasion, and a skill's Attack Speed value |
 | Dexterity | Increases accuracy, critical chance, block, and parry |
 | Intellect | Increases magical damage and healing |
 
@@ -84,7 +84,7 @@ Percentage modifiers are applied after flat modifiers. Example:
 Modified Battle Speed = floor(Battle Speed × Speed Multiplier)
 ```
 
-## Weapon Attacks and combat exchanges
+## Weapon Attacks
 
 The basic automatic skill category is named **Weapon Attack**. Its displayed
 name comes from the equipped weapon, such as `Sword Attack`, `Axe Attack`, or
@@ -94,22 +94,14 @@ A Weapon Attack is:
 
 - automatically granted by the equipped weapon;
 - used when initiating a normal attack;
-- used to counter when attacked, if the defender survives, the attacker is in
-  range, and the weapon permits a counter;
+- used as the unit's automatic defensive attack when targeted during the
+  opposing turn, as described in the original concept;
 - removed or replaced immediately when the weapon changes.
 
-Active skills do not replace the counterattack unless the skill explicitly has
-the `counter` property.
-
-### Exchange order
-
-1. Determine whether both units can attack from their current positions.
-2. Calculate each usable action's Attack Speed.
-3. The higher Attack Speed acts first. The initiator wins ties.
-4. If the other unit survives and can counter, it acts next.
-5. If the Attack Speed difference is at least `20` (**initial tuning value**),
-   the faster unit makes one follow-up strike if it is still alive and in range.
-6. A unit can make at most one follow-up per exchange.
+No strike-order or follow-up rule is approved. The exact effect of Attack Speed
+and the timing of the automatic defensive attack remain open design decisions.
+Active skills are not used automatically during defense unless a future skill
+explicitly says otherwise.
 
 ## Accuracy, critical hits, and damage
 
@@ -131,14 +123,14 @@ skip the accuracy roll and display `100%`.
 ```text
 Displayed Crit = clamp(
     Skill Base Crit + floor(Dexterity / 4) + Flat Crit Modifiers
-    - Target Crit Resistance,
+    - Target Critical Avoid,
     0,
     100
 )
 ```
 
-Critical Resistance is a derived value supplied by classes, equipment, or
-passives; it is `0` when no source provides it.
+Critical Avoid is a derived value supplied by classes, equipment, or passives;
+it is `0` when no source provides it.
 
 Critical damage is `2 × Final Damage` (**initial tuning value**). Healing and
 skills marked `cannot crit` skip the critical roll.
@@ -153,14 +145,13 @@ Physical Damage = max(0, Physical Power - Target Armor)
 ### Magical damage
 
 ```text
-Magical Power = Intellect + Weapon Magic Damage + Skill Power
+Magical Power = Intellect + Weapon Damage + Skill Power
     + Flat Damage Modifiers
-Magical Damage = max(0, Magical Power - Target Resistance)
+Magical Damage = max(0, Magical Power - Target Armor)
 ```
 
-Resistance is a derived defensive value supplied by equipment, class, and
-skills. Keeping Armor and Resistance separate gives physical and magical builds
-different counters.
+Armor is the single defensive value and reduces both physical and magical
+damage. There is no separate Resistance characteristic or defense.
 
 ### Healing
 
@@ -169,8 +160,7 @@ Healing = max(1, Intellect + Weapon Healing Bonus + Skill Healing Power)
 Final HP = min(Max HP, Current HP + Healing)
 ```
 
-The baseline Heal skill cannot miss, cannot crit, and has no Attack Speed because
-it does not participate in an exchange.
+The baseline Heal skill cannot miss, cannot crit, and has no Attack Speed value.
 
 ### Resolution order for one strike
 
@@ -179,7 +169,7 @@ it does not participate in an exchange.
 3. Check Parry, then Block, when applicable.
 4. Roll critical chance when allowed.
 5. Calculate raw physical, magical, or healing power.
-6. Apply Armor or Resistance.
+6. Apply Armor.
 7. Apply critical and remaining skill modifiers.
 8. Apply damage or healing and resolve defeat.
 
@@ -208,7 +198,7 @@ A unit may equip an item only when all of these conditions are true:
 | --- | --- |
 | Weapon type | Sword, axe, bow, staff, tome, and future types |
 | Damage type | Physical, magical, healing, or hybrid |
-| Damage / magic damage | Added to the appropriate power formula |
+| Damage | Added to the physical or magical power formula |
 | Healing bonus | Added to healing formulas |
 | Weight | Contributes to Total Weight |
 | Range | Valid minimum and maximum attack distance |
@@ -231,8 +221,7 @@ Base Attack Speed = 50
 | Field | Purpose |
 | --- | --- |
 | Armor type | Cloth, light, medium, heavy, and future types |
-| Armor value | Reduces physical damage |
-| Resistance | Reduces magical damage |
+| Armor value | Reduces physical and magical damage |
 | Weight | Contributes to Total Weight |
 | Requirements | Class tags and permanent characteristic minimums |
 
@@ -291,8 +280,8 @@ for a strike. The `60%` cap is an **initial tuning value**.
 
 ### Weapon Attacks
 
-Automatic basic actions granted by weapons. They can initiate attacks and
-counterattacks.
+Automatic basic actions granted by weapons. They are used when attacking and as
+the automatic defensive attack during the opposing turn.
 
 ### Active skills
 
@@ -302,7 +291,7 @@ Chosen deliberately during the player's turn. An active skill defines:
 - physical, magical, healing, or utility effect;
 - base hit, base crit, and base attack speed when relevant;
 - resource cost, cooldown, or limited uses when relevant;
-- whether it can counter, miss, crit, or trigger a follow-up.
+- whether it can miss or crit.
 
 ### Passive skills
 
@@ -406,9 +395,9 @@ Illustrative requirements, pending starting-stat balance:
 ## Initial implementation plan
 
 1. Rename `Precision` to `Dexterity` and centralize derived-stat formulas.
-2. Add equipment resources, requirements, weight, Armor, and Resistance.
+2. Add equipment resources, requirements, weight, and Armor.
 3. Replace direct strikes with data-driven Weapon Attacks and a shared forecast.
-4. Add critical hits, follow-ups, Block, Parry, and passive modifiers.
+4. Add critical hits, Block, Parry, and passive modifiers.
 5. Add level, EXP, growth rates, stat caps, and the level-up result flow.
 6. Add class requirements, class selection, growth modifiers, and equipment tags.
 7. Add active skills, healing, costs, cooldowns, and AI skill selection.
@@ -419,7 +408,8 @@ These values need playtesting before they become final:
 
 - `5–95%` hit bounds;
 - `2×` critical damage;
-- `20` Attack Speed required for a follow-up;
+- the exact combat effect of Attack Speed;
+- the timing and conditions of the automatic defensive Weapon Attack;
 - `75%` Block and `60%` Parry caps;
 - kill-only EXP versus participation EXP;
 - when class-selection and promotion opportunities occur;
@@ -428,9 +418,12 @@ These values need playtesting before they become final:
 ## Current prototype gap
 
 The current code implements HP, Strength, Speed, `Precision`, Intellect, Armor,
-basic hit rolls, simple strike order, and counterattacks. It does not yet
-implement the formulas in this document for weight, equipment, Armor mitigation,
-Resistance, critical hits, follow-ups, skills, EXP, growth, or classes.
+and basic hit rolls. It does not yet implement the formulas in this document for
+weight, equipment, Armor mitigation, critical hits, skills, EXP, growth, or
+classes.
+
+The prototype currently also contains speed-based strike order and reciprocal
+attacks. Those are legacy prototype behaviors, not approved GDD rules.
 
 The GDD is the target specification. Code changes should be introduced in the
 implementation order above and accompanied by small deterministic tests.
