@@ -53,6 +53,7 @@ var is_selected_visual: bool = false
 var is_hovered_visual: bool = false
 var visual_size_multiplier: float = 0.75
 var visual_vertical_offset: float = -24.0
+var animation_speed_multiplier: float = 1.0
 
 func _ready() -> void:
 	add_to_group("units")
@@ -159,6 +160,10 @@ func set_visual_settings(size_multiplier: float, vertical_offset: float) -> void
 	visual_size_multiplier = clampf(size_multiplier, 0.5, 2.0)
 	visual_vertical_offset = clampf(vertical_offset, -64.0, 64.0)
 	_refresh_visual_scale()
+
+func set_animation_speed_multiplier(speed_multiplier: float) -> void:
+	animation_speed_multiplier = clampf(speed_multiplier, 0.25, 3.0)
+	_get_sprite().speed_scale = animation_speed_multiplier
 
 func is_alive() -> bool:
 	return current_hp > 0

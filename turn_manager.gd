@@ -7,6 +7,7 @@ const UnitDefinitionScript = preload("res://units/unit_definition.gd")
 const BattleHudScript = preload("res://ui/battle_hud.gd")
 const CombatResolverScript = preload("res://battle/combat_resolver.gd")
 const EnemyAIScript = preload("res://battle/enemy_ai.gd")
+const BASE_MOVE_STEP_TIME: float = 0.12
 
 enum Phase { PLAYER, ENEMY }
 enum ActionState { IDLE, MOVING, COMBAT, ENEMY_TURN }
@@ -55,6 +56,8 @@ var combat_resolver = CombatResolverScript.new()
 var enemy_ai = EnemyAIScript.new()
 var unit_visual_size_multiplier: float = 0.75
 var unit_visual_vertical_offset: float = -24.0
+var unit_animation_speed_multiplier: float = 1.0
+var unit_movement_speed_multiplier: float = 1.0
 
 @export var highlight_path: NodePath
 var highlight: HighlightMap
@@ -183,6 +186,7 @@ func _add_unit(faction: Unit.Faction, cell: Vector2i, tex: Texture2D, definition
 			u.set_display_name(auto_name)
 	u.set_tile_size(board.tile_set.tile_size)
 	u.set_visual_settings(unit_visual_size_multiplier, unit_visual_vertical_offset)
+	u.set_animation_speed_multiplier(unit_animation_speed_multiplier)
 	if definition == null \
 	or (definition.texture == null and definition.fe8_map_sprite_animation == null):
 		u.set_texture(tex)
@@ -213,6 +217,18 @@ func set_unit_visual_settings(size_multiplier: float, vertical_offset: float) ->
 	for unit in all_units:
 		if unit != null and is_instance_valid(unit):
 			unit.set_visual_settings(unit_visual_size_multiplier, unit_visual_vertical_offset)
+
+func set_unit_animation_settings(animation_speed_multiplier: float, movement_speed_multiplier: float) -> void:
+	unit_animation_speed_multiplier = clampf(animation_speed_multiplier, 0.25, 3.0)
+	unit_movement_speed_multiplier = clampf(movement_speed_multiplier, 0.25, 2.0)
+	var all_units: Array[Unit] = player_units.duplicate()
+	all_units.append_array(enemy_units)
+	for unit in all_units:
+		if unit != null and is_instance_valid(unit):
+			unit.set_animation_speed_multiplier(unit_animation_speed_multiplier)
+
+func get_move_step_time() -> float:
+	return BASE_MOVE_STEP_TIME / unit_movement_speed_multiplier
 
 func _start_player_phase() -> void:
 	highlight.clear_cells()
@@ -378,7 +394,7 @@ func _run_enemy_phase() -> void:
 
 func _move_unit(u: Unit, path: Array[Vector2i]) -> void:
 	occ.erase(u.cell)
-	await u.move_along(path, board, 0.12)
+	await u.move_along(path, board, get_move_step_time())
 	if is_instance_valid(u):
 		occ[u.cell] = u
 

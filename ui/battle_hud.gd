@@ -3,11 +3,16 @@ class_name BattleHud
 
 signal damage_preview_changed(damage_by_unit: Dictionary)
 signal unit_visual_settings_changed(size_multiplier: float, vertical_offset: float)
+signal unit_animation_settings_changed(animation_speed_multiplier: float, movement_speed_multiplier: float)
 
 const MIN_UNIT_SIZE_MULTIPLIER: float = 0.5
 const MAX_UNIT_SIZE_MULTIPLIER: float = 2.0
 const MIN_UNIT_VERTICAL_OFFSET: float = -64.0
 const MAX_UNIT_VERTICAL_OFFSET: float = 64.0
+const MIN_ANIMATION_SPEED_MULTIPLIER: float = 0.25
+const MAX_ANIMATION_SPEED_MULTIPLIER: float = 3.0
+const MIN_MOVEMENT_SPEED_MULTIPLIER: float = 0.25
+const MAX_MOVEMENT_SPEED_MULTIPLIER: float = 2.0
 
 var focused_unit: Unit
 var preview_attacker: Unit
@@ -23,9 +28,15 @@ var unit_size_slider: HSlider
 var unit_size_value_label: Label
 var unit_vertical_offset_slider: HSlider
 var unit_vertical_offset_value_label: Label
+var unit_animation_speed_slider: HSlider
+var unit_animation_speed_value_label: Label
+var unit_movement_speed_slider: HSlider
+var unit_movement_speed_value_label: Label
 
 var unit_size_multiplier: float = 0.75
 var unit_vertical_offset: float = -24.0
+var unit_animation_speed_multiplier: float = 1.0
+var unit_movement_speed_multiplier: float = 1.0
 
 
 func _ready() -> void:
@@ -51,7 +62,7 @@ func _build_unit_visual_settings_panel() -> void:
 	unit_visual_settings_panel.offset_left = -316.0
 	unit_visual_settings_panel.offset_top = 60.0
 	unit_visual_settings_panel.offset_right = -16.0
-	unit_visual_settings_panel.offset_bottom = 198.0
+	unit_visual_settings_panel.offset_bottom = 282.0
 	add_child(unit_visual_settings_panel)
 
 	var margin := MarginContainer.new()
@@ -66,7 +77,7 @@ func _build_unit_visual_settings_panel() -> void:
 	margin.add_child(rows)
 
 	var title := Label.new()
-	title.text = "Unit display"
+	title.text = "Unit options"
 	title.add_theme_font_size_override("font_size", 16)
 	rows.add_child(title)
 
@@ -114,8 +125,46 @@ func _build_unit_visual_settings_panel() -> void:
 	unit_vertical_offset_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	controls.add_child(unit_vertical_offset_value_label)
 
+	var animation_speed_label := Label.new()
+	animation_speed_label.text = "Anim speed"
+	controls.add_child(animation_speed_label)
+
+	unit_animation_speed_slider = HSlider.new()
+	unit_animation_speed_slider.name = "UnitAnimationSpeedSlider"
+	unit_animation_speed_slider.custom_minimum_size.x = 150.0
+	unit_animation_speed_slider.min_value = MIN_ANIMATION_SPEED_MULTIPLIER
+	unit_animation_speed_slider.max_value = MAX_ANIMATION_SPEED_MULTIPLIER
+	unit_animation_speed_slider.step = 0.05
+	unit_animation_speed_slider.value = unit_animation_speed_multiplier
+	unit_animation_speed_slider.value_changed.connect(_on_unit_animation_speed_changed)
+	controls.add_child(unit_animation_speed_slider)
+
+	unit_animation_speed_value_label = Label.new()
+	unit_animation_speed_value_label.custom_minimum_size.x = 48.0
+	unit_animation_speed_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	controls.add_child(unit_animation_speed_value_label)
+
+	var movement_speed_label := Label.new()
+	movement_speed_label.text = "Move speed"
+	controls.add_child(movement_speed_label)
+
+	unit_movement_speed_slider = HSlider.new()
+	unit_movement_speed_slider.name = "UnitMovementSpeedSlider"
+	unit_movement_speed_slider.custom_minimum_size.x = 150.0
+	unit_movement_speed_slider.min_value = MIN_MOVEMENT_SPEED_MULTIPLIER
+	unit_movement_speed_slider.max_value = MAX_MOVEMENT_SPEED_MULTIPLIER
+	unit_movement_speed_slider.step = 0.05
+	unit_movement_speed_slider.value = unit_movement_speed_multiplier
+	unit_movement_speed_slider.value_changed.connect(_on_unit_movement_speed_changed)
+	controls.add_child(unit_movement_speed_slider)
+
+	unit_movement_speed_value_label = Label.new()
+	unit_movement_speed_value_label.custom_minimum_size.x = 48.0
+	unit_movement_speed_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	controls.add_child(unit_movement_speed_value_label)
+
 	var reset_button := Button.new()
-	reset_button.name = "ResetUnitVisualSettingsButton"
+	reset_button.name = "ResetUnitSettingsButton"
 	reset_button.text = "Reset"
 	reset_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	reset_button.pressed.connect(_on_reset_unit_visual_settings)
@@ -130,11 +179,11 @@ func _on_unit_visual_settings_toggled(is_open: bool) -> void:
 
 func _set_unit_visual_menu_open(is_open: bool) -> void:
 	unit_visual_settings_panel.visible = is_open
-	unit_visual_settings_toggle.text = "Unit display ▲" if is_open else "Unit display ▼"
+	unit_visual_settings_toggle.text = "Unit options ▲" if is_open else "Unit options ▼"
 	var end_turn_button := get_node_or_null("EndTurnButton") as Button
 	if end_turn_button != null:
-		end_turn_button.offset_top = 214.0 if is_open else 68.0
-		end_turn_button.offset_bottom = 260.0 if is_open else 114.0
+		end_turn_button.offset_top = 298.0 if is_open else 68.0
+		end_turn_button.offset_bottom = 344.0 if is_open else 114.0
 
 
 func _on_unit_size_changed(value: float) -> void:
@@ -149,9 +198,23 @@ func _on_unit_vertical_offset_changed(value: float) -> void:
 	unit_visual_settings_changed.emit(unit_size_multiplier, unit_vertical_offset)
 
 
+func _on_unit_animation_speed_changed(value: float) -> void:
+	unit_animation_speed_multiplier = value
+	_refresh_unit_visual_settings_labels()
+	unit_animation_settings_changed.emit(unit_animation_speed_multiplier, unit_movement_speed_multiplier)
+
+
+func _on_unit_movement_speed_changed(value: float) -> void:
+	unit_movement_speed_multiplier = value
+	_refresh_unit_visual_settings_labels()
+	unit_animation_settings_changed.emit(unit_animation_speed_multiplier, unit_movement_speed_multiplier)
+
+
 func _on_reset_unit_visual_settings() -> void:
 	unit_size_slider.value = 0.75
 	unit_vertical_offset_slider.value = -24.0
+	unit_animation_speed_slider.value = 1.0
+	unit_movement_speed_slider.value = 1.0
 
 
 func _refresh_unit_visual_settings_labels() -> void:
@@ -159,6 +222,10 @@ func _refresh_unit_visual_settings_labels() -> void:
 		unit_size_value_label.text = "%d%%" % roundi(unit_size_multiplier * 100.0)
 	if unit_vertical_offset_value_label != null:
 		unit_vertical_offset_value_label.text = "%+d px" % roundi(unit_vertical_offset)
+	if unit_animation_speed_value_label != null:
+		unit_animation_speed_value_label.text = "%d%%" % roundi(unit_animation_speed_multiplier * 100.0)
+	if unit_movement_speed_value_label != null:
+		unit_movement_speed_value_label.text = "%d%%" % roundi(unit_movement_speed_multiplier * 100.0)
 
 
 func focus_unit(unit: Unit) -> void:

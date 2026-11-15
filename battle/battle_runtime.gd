@@ -62,4 +62,10 @@ func _ready() -> void:
 		hud.damage_preview_changed.connect(hp_overlay.set_damage_previews)
 	if not hud.unit_visual_settings_changed.is_connected(manager.set_unit_visual_settings):
 		hud.unit_visual_settings_changed.connect(manager.set_unit_visual_settings)
+	if not hud.unit_animation_settings_changed.is_connected(manager.set_unit_animation_settings):
+		hud.unit_animation_settings_changed.connect(manager.set_unit_animation_settings)
 	manager.set_unit_visual_settings(hud.unit_size_multiplier, hud.unit_vertical_offset)
+	manager.set_unit_animation_settings(
+		hud.unit_animation_speed_multiplier,
+		hud.unit_movement_speed_multiplier
+	)

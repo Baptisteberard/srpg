@@ -46,6 +46,8 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 	var settings_panel := battle.find_child("UnitVisualSettingsPanel", true, false) as PanelContainer
 	var size_slider := battle.find_child("UnitSizeSlider", true, false) as HSlider
 	var offset_slider := battle.find_child("UnitVerticalOffsetSlider", true, false) as HSlider
+	var animation_speed_slider := battle.find_child("UnitAnimationSpeedSlider", true, false) as HSlider
+	var movement_speed_slider := battle.find_child("UnitMovementSpeedSlider", true, false) as HSlider
 	_expect(board != null and not board.get_used_cells().is_empty(), "%s has a populated board" % scene_path)
 	_expect(manager != null, "%s has a TurnManager" % scene_path)
 	if manager != null:
@@ -66,9 +68,14 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 	and settings_toggle != null \
 	and settings_panel != null \
 	and size_slider != null \
-	and offset_slider != null:
+	and offset_slider != null \
+	and animation_speed_slider != null \
+	and movement_speed_slider != null:
 		var defaults_work := is_equal_approx(manager.unit_visual_size_multiplier, 0.75) \
-			and is_equal_approx(manager.unit_visual_vertical_offset, -24.0)
+			and is_equal_approx(manager.unit_visual_vertical_offset, -24.0) \
+			and is_equal_approx(manager.unit_animation_speed_multiplier, 1.0) \
+			and is_equal_approx(manager.unit_movement_speed_multiplier, 1.0) \
+			and is_equal_approx(manager.get_move_step_time(), 0.12)
 		var menu_starts_closed := not settings_panel.visible
 		settings_toggle.button_pressed = true
 		await process_frame
@@ -78,6 +85,8 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 		var menu_closes := not settings_panel.visible
 		size_slider.value = 1.25
 		offset_slider.value = -12.0
+		animation_speed_slider.value = 1.5
+		movement_speed_slider.value = 0.5
 		await process_frame
 		var all_units: Array[Unit] = manager.player_units.duplicate()
 		all_units.append_array(manager.enemy_units)
@@ -88,16 +97,23 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 			and not all_units.is_empty()
 		for unit in all_units:
 			if not is_equal_approx(unit.visual_size_multiplier, 1.25) \
-			or not is_equal_approx(unit._get_sprite().position.y, -12.0):
+			or not is_equal_approx(unit._get_sprite().position.y, -12.0) \
+			or not is_equal_approx(unit.animation_speed_multiplier, 1.5) \
+			or not is_equal_approx(unit._get_sprite().speed_scale, 1.5):
 				visual_settings_work = false
 				break
+		visual_settings_work = visual_settings_work \
+			and is_equal_approx(manager.unit_movement_speed_multiplier, 0.5) \
+			and is_equal_approx(manager.get_move_step_time(), 0.24)
 	_expect(
 		settings_toggle != null \
 		and settings_panel != null \
 		and size_slider != null \
 		and offset_slider != null \
+		and animation_speed_slider != null \
+		and movement_speed_slider != null \
 		and visual_settings_work,
-		"%s has working collapsible top-right unit display controls" % scene_path
+		"%s has working unit display, animation-speed, and movement-speed controls" % scene_path
 	)
 
 	battle.queue_free()
