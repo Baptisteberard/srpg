@@ -8,12 +8,13 @@ const SOURCE_PATH: String = "res://assets/fire_emblem_sacred_stones/map_sprites.
 const EXPECTED_SOURCE_SIZE: Vector2i = Vector2i(360, 7538)
 const FRAME_SIZE: Vector2i = FE8MapSpriteAnimation.FRAME_SIZE
 const CELL_STRIDE: int = 33
-const COMPACT_COLUMNS: int = 3
+const COMPACT_COLUMNS: int = 4
 const COMPACT_ROWS: int = 5
 
 # Source columns are idle 1, side movement, down movement, up movement, idle 2.
 # Compact rows put the two idle sequences first for FE8MapSpriteAnimation.
 const SOURCE_COLUMN_BY_COMPACT_ROW: Array[int] = [0, 4, 1, 2, 3]
+const FRAME_COUNT_BY_COMPACT_ROW: Array[int] = [3, 3, 4, 4, 4]
 
 const PALETTE_X: int = 53
 const PALETTE_STRIDE: int = 8
@@ -118,11 +119,12 @@ static func _extract_compact_sheet(source: Image, layout: Dictionary, palette_na
 	)
 	output.fill(Color(0.0, 0.0, 0.0, 0.0))
 
-	# Every sequence in the 5x3 block runs vertically through three frames.
+	# Every sequence runs vertically: three frames for idles, four for movement.
 	var moving_origin: Vector2i = layout["moving_origin"]
 	for output_row in range(SOURCE_COLUMN_BY_COMPACT_ROW.size()):
 		var source_column: int = SOURCE_COLUMN_BY_COMPACT_ROW[output_row]
-		for frame_index in range(3):
+		var frame_count: int = FRAME_COUNT_BY_COMPACT_ROW[output_row]
+		for frame_index in range(frame_count):
 			var source_pos := moving_origin + Vector2i(source_column * CELL_STRIDE, frame_index * CELL_STRIDE)
 			var destination := Vector2i(frame_index * FRAME_SIZE.x, output_row * FRAME_SIZE.y)
 			_blit_processed_frame(source, output, source_pos, destination, palette_map, transparent_colors)

@@ -78,11 +78,14 @@ func _test_fe8_map_sprite_import() -> void:
 	if recruit == null or brigand == null:
 		return
 	_expect(
-		recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.IDLE_PRIMARY) == 4 \
-		and recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.IDLE_SECONDARY) == 4 \
+		recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.IDLE_PRIMARY) == 3 \
+		and recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.IDLE_SECONDARY) == 3 \
+		and recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.WALK_LEFT) == 4 \
 		and recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.WALK_RIGHT) == 4 \
+		and recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.WALK_DOWN) == 4 \
+		and recruit.sprite_frames.get_frame_count(FE8MapSpriteAnimation.WALK_UP) == 4 \
 		and brigand.sprite_frames.has_animation(FE8MapSpriteAnimation.WALK_LEFT),
-		"FE8's two idle and directional movement sequences are available"
+		"FE8 idle columns have three frames and movement columns have four"
 	)
 	var brigand_image := brigand.compact_texture.get_image()
 	var contains_enemy_red := false

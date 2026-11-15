@@ -48,9 +48,12 @@ var is_visually_moving: bool = false
 var sprite: AnimatedSprite2D = null
 var fe8_map_sprite_animation: FE8MapSpriteAnimation = null
 var is_selected_visual: bool = false
+var is_hovered_visual: bool = false
 
 func _ready() -> void:
 	add_to_group("units")
+	mouse_entered.connect(_on_mouse_entered)
+	mouse_exited.connect(_on_mouse_exited)
 	_sanitize_stats()
 	if current_hp < 0:
 		current_hp = health
@@ -194,7 +197,10 @@ func play_attack_animation(target_world_pos: Vector2) -> void:
 	is_visually_moving = true
 	visual_motion_started.emit(self)
 	if has_fe8_map_sprite_animation():
-		_get_sprite().play(FE8MapSpriteAnimation.IDLE_SECONDARY)
+		var attack_direction := Vector2i(0, 1 if to_target.y >= 0.0 else -1)
+		if absf(to_target.x) > absf(to_target.y):
+			attack_direction = Vector2i(1 if to_target.x >= 0.0 else -1, 0)
+		_play_walk_direction(attack_direction)
 	var tw: Tween = create_tween()
 	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.tween_property(self, "global_position", hit_pos, attack_lunge_time)
@@ -230,6 +236,16 @@ func set_selected(selected: bool) -> void:
 	if not is_visually_moving:
 		_play_stationary_visual()
 
+func _on_mouse_entered() -> void:
+	is_hovered_visual = true
+	if not is_visually_moving:
+		_play_stationary_visual()
+
+func _on_mouse_exited() -> void:
+	is_hovered_visual = false
+	if not is_visually_moving:
+		_play_stationary_visual()
+
 func _refresh_visual_scale() -> void:
 	var base_scale := 1.0
 	if has_fe8_map_sprite_animation():
@@ -243,7 +259,9 @@ func _play_stationary_visual() -> void:
 		return
 	_get_sprite().flip_h = false
 	_get_sprite().play(
-		FE8MapSpriteAnimation.IDLE_SECONDARY if is_selected_visual else FE8MapSpriteAnimation.IDLE_PRIMARY
+		FE8MapSpriteAnimation.IDLE_SECONDARY \
+		if is_selected_visual or is_hovered_visual \
+		else FE8MapSpriteAnimation.IDLE_PRIMARY
 	)
 
 func _play_walk_direction(direction: Vector2i) -> void:

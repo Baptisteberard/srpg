@@ -3,9 +3,8 @@ class_name FE8MapSpriteAnimation
 
 ## Runtime representation of one Fire Emblem 8 map-sprite class.
 ##
-## The compact texture is produced in memory by FE8MapSpriteImporter. Each row
-## contains the three unique frames for one FE8 animation. Godot repeats the
-## middle frame to reproduce the original 1-2-3-2 loop.
+## The compact texture is produced in memory by FE8MapSpriteImporter. Idle rows
+## contain three frames; directional movement rows contain four frames.
 
 const FRAME_SIZE: Vector2i = Vector2i(32, 32)
 
@@ -40,21 +39,27 @@ func _build_sprite_frames() -> SpriteFrames:
 	if frames.has_animation(&"default"):
 		frames.remove_animation(&"default")
 
-	_add_ping_pong_animation(frames, IDLE_PRIMARY, 0, 3.0)
-	_add_ping_pong_animation(frames, IDLE_SECONDARY, 1, 6.0)
-	_add_ping_pong_animation(frames, WALK_LEFT, 2, 10.0)
-	_add_ping_pong_animation(frames, WALK_DOWN, 3, 10.0)
-	_add_ping_pong_animation(frames, WALK_UP, 4, 10.0)
+	_add_animation(frames, IDLE_PRIMARY, 0, 3, 3.0)
+	_add_animation(frames, IDLE_SECONDARY, 1, 3, 6.0)
+	_add_animation(frames, WALK_LEFT, 2, 4, 10.0)
+	_add_animation(frames, WALK_DOWN, 3, 4, 10.0)
+	_add_animation(frames, WALK_UP, 4, 4, 10.0)
 	# FE8 stores one side-movement sequence. Unit mirrors it when moving right.
-	_add_ping_pong_animation(frames, WALK_RIGHT, 2, 10.0)
+	_add_animation(frames, WALK_RIGHT, 2, 4, 10.0)
 	return frames
 
 
-func _add_ping_pong_animation(frames: SpriteFrames, animation_name: StringName, row: int, fps: float) -> void:
+func _add_animation(
+	frames: SpriteFrames,
+	animation_name: StringName,
+	row: int,
+	frame_count: int,
+	fps: float
+) -> void:
 	frames.add_animation(animation_name)
 	frames.set_animation_loop(animation_name, true)
 	frames.set_animation_speed(animation_name, fps)
-	for frame_index in [0, 1, 2, 1]:
+	for frame_index in range(frame_count):
 		frames.add_frame(animation_name, _atlas_frame(frame_index, row))
 
 
