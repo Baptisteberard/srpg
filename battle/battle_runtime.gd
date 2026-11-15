@@ -44,9 +44,10 @@ func _apply_local_fe8_prototype_definitions() -> void:
 				enemy_unit_definitions.append(brigand_definition)
 
 
-func _make_fe8_definition(display_name: String, animation: FE8MapSpriteAnimation) -> UnitStats:
+func _make_fe8_definition(class_name_value: String, animation: FE8MapSpriteAnimation) -> UnitStats:
 	var definition := UnitDefinitionScript.new() as UnitStats
-	definition.display_name = display_name
+	definition.display_name = ""
+	definition.unit_class_name = class_name_value
 	definition.fe8_map_sprite_animation = animation
 	return definition
 

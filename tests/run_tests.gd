@@ -44,7 +44,9 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 	var manager: TurnManager = battle.find_child("TurnManager", true, false) as TurnManager
 	var hud := battle.find_child("UI", true, false) as BattleHud
 	var unit_info_panel := battle.find_child("UnitStatsPanel", true, false) as PanelContainer
+	var identity_label := battle.find_child("UnitIdentityLabel", true, false) as RichTextLabel
 	var unit_info_tabs := battle.find_child("UnitInfoTabs", true, false) as TabContainer
+	var characteristics_label := battle.find_child("CharacteristicsLabel", true, false) as RichTextLabel
 	var equipment_label := battle.find_child("EquipmentLabel", true, false) as RichTextLabel
 	var skills_label := battle.find_child("SkillsLabel", true, false) as RichTextLabel
 	var settings_toggle := battle.find_child("UnitVisualSettingsToggle", true, false) as Button
@@ -72,17 +74,25 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 	if manager != null \
 	and hud != null \
 	and unit_info_panel != null \
+	and identity_label != null \
 	and unit_info_tabs != null \
+	and characteristics_label != null \
 	and equipment_label != null \
 	and skills_label != null \
 	and not manager.player_units.is_empty():
 		hud.focus_unit(manager.player_units[0])
 		await process_frame
+		var focused_unit: Unit = manager.player_units[0]
 		unit_tabs_work = unit_info_panel.visible \
+			and identity_label.text.contains(focused_unit.get_display_name()) \
+			and identity_label.text.contains(focused_unit.get_class_display_name()) \
 			and unit_info_tabs.get_tab_count() == 3 \
 			and unit_info_tabs.get_tab_title(0) == "Characteristics" \
 			and unit_info_tabs.get_tab_title(1) == "Equipment" \
 			and unit_info_tabs.get_tab_title(2) == "Skills" \
+			and characteristics_label.text.count("Growth:") == 5 \
+			and not characteristics_label.text.contains("Armor") \
+			and not characteristics_label.text.contains("Damage") \
 			and not equipment_label.text.is_empty() \
 			and not skills_label.text.is_empty()
 	_expect(unit_tabs_work, "%s shows one unit window with three information tabs" % scene_path)

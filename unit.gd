@@ -15,6 +15,7 @@ const FE8_DISPLAY_SCALE_MULTIPLIER: float = 2.0
 
 @export var faction: Faction = Faction.PLAYER
 @export var unit_name: String = ""
+@export var unit_class_name: String = "Unclassed"
 @export var move_range: int = 8
 @export_group("Stats")
 @export var health: int = 20
@@ -23,6 +24,12 @@ const FE8_DISPLAY_SCALE_MULTIPLIER: float = 2.0
 @export_range(0, 100, 1) var precision: int = 100
 @export var intellect: int = 0
 @export var armor: int = 0
+@export_group("Growth Rates")
+@export_range(0, 300, 1) var health_growth_rate: int = 0
+@export_range(0, 300, 1) var strength_growth_rate: int = 0
+@export_range(0, 300, 1) var speed_growth_rate: int = 0
+@export_range(0, 300, 1) var dexterity_growth_rate: int = 0
+@export_range(0, 300, 1) var intellect_growth_rate: int = 0
 @export_group("Combat")
 @export var attack_range: int = 1
 @export var attack_lunge_time: float = 0.08
@@ -72,6 +79,11 @@ func _sanitize_stats() -> void:
 	precision = clampi(precision, 0, 100)
 	intellect = maxi(0, intellect)
 	armor = maxi(0, armor)
+	health_growth_rate = clampi(health_growth_rate, 0, 300)
+	strength_growth_rate = clampi(strength_growth_rate, 0, 300)
+	speed_growth_rate = clampi(speed_growth_rate, 0, 300)
+	dexterity_growth_rate = clampi(dexterity_growth_rate, 0, 300)
+	intellect_growth_rate = clampi(intellect_growth_rate, 0, 300)
 
 func set_stats(health_value: int, strength_value: int, speed_value: int, precision_value: int, intellect_value: int, armor_value: int, reset_current_hp: bool = true) -> void:
 	health = health_value
@@ -92,6 +104,14 @@ func apply_definition(definition: UnitStats, reset_current_hp: bool = true) -> v
 	if definition == null:
 		return
 	set_display_name(definition.display_name)
+	unit_class_name = definition.unit_class_name.strip_edges()
+	if unit_class_name == "":
+		unit_class_name = "Unclassed"
+	health_growth_rate = definition.health_growth_rate
+	strength_growth_rate = definition.strength_growth_rate
+	speed_growth_rate = definition.speed_growth_rate
+	dexterity_growth_rate = definition.dexterity_growth_rate
+	intellect_growth_rate = definition.intellect_growth_rate
 	set_stats(
 		definition.health,
 		definition.strength,
@@ -119,6 +139,11 @@ func get_display_name() -> String:
 	if unit_name.strip_edges() != "":
 		return unit_name.strip_edges()
 	return name
+
+func get_class_display_name() -> String:
+	if unit_class_name.strip_edges() != "":
+		return unit_class_name.strip_edges()
+	return "Unclassed"
 
 func _get_sprite() -> AnimatedSprite2D:
 	if sprite == null:

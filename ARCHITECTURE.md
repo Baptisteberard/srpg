@@ -22,7 +22,7 @@ highlights, HP overlay, HUD, unit scene, and battle controller.
 | `GridNavigator` | Reachability and shortest-path calculations |
 | `CombatResolver` | Current prototype combat forecast, hit rolls, reciprocal attacks, damage, and defeat events |
 | `EnemyAI` | Enemy movement decisions; currently chooses a random reachable cell |
-| `BattleHud` | Tabbed unit details (Characteristics, Equipment, Skills), combat preview, phase label, End Turn interface, and collapsible live unit-display, animation-speed, and movement-speed controls |
+| `BattleHud` | Unit identity header, tabbed unit details (Characteristics, Equipment, Skills), combat damage previews, phase label, End Turn interface, and collapsible live unit-display, animation-speed, and movement-speed controls |
 | `HighlightMap` | Movement, attack, hover, and path-preview drawing |
 | `UnitHpOverlay` | Event-driven HP bars, forecast pulses, delayed damage trails, and death fades |
 | `Unit` | Runtime unit state, input, movement/attack animation, and defeat fade |

@@ -20,6 +20,8 @@ var preview_defender: Unit
 var preview_attacker_cell: Vector2i = Vector2i.ZERO
 
 var stats_panel: PanelContainer
+var unit_info_layout: VBoxContainer
+var unit_identity_label: RichTextLabel
 var stats_tabs: TabContainer
 var stats_scroll: ScrollContainer
 var stats_label: RichTextLabel
@@ -288,7 +290,11 @@ func _emit_damage_preview() -> void:
 
 
 func refresh() -> void:
-	if stats_panel == null or stats_label == null or equipment_label == null or skills_label == null:
+	if stats_panel == null \
+	or unit_identity_label == null \
+	or stats_label == null \
+	or equipment_label == null \
+	or skills_label == null:
 		return
 
 	if preview_attacker != null \
@@ -301,21 +307,20 @@ func refresh() -> void:
 		var preview_side_unit: Unit = preview_defender
 		if focused_unit != null and is_instance_valid(focused_unit):
 			preview_side_unit = focused_unit
-		stats_label.text = _build_combat_preview_text(preview_attacker, preview_defender, preview_attacker_cell)
-		_refresh_unit_detail_tabs(preview_side_unit)
+		_refresh_unit_window(preview_side_unit)
 		_position_stats_panel_for_unit(preview_side_unit)
 		return
 
 	if focused_unit == null or not is_instance_valid(focused_unit) or not focused_unit.is_alive():
 		stats_panel.visible = false
+		unit_identity_label.text = ""
 		stats_label.text = ""
 		equipment_label.text = ""
 		skills_label.text = ""
 		return
 
 	stats_panel.visible = true
-	stats_label.text = _build_default_unit_stats_text(focused_unit)
-	_refresh_unit_detail_tabs(focused_unit)
+	_refresh_unit_window(focused_unit)
 	_position_stats_panel_for_unit(focused_unit)
 
 
@@ -332,11 +337,27 @@ func _build_stats_panel() -> void:
 	margin.add_theme_constant_override("margin_bottom", 8)
 	stats_panel.add_child(margin)
 
+	unit_info_layout = VBoxContainer.new()
+	unit_info_layout.add_theme_constant_override("separation", 6)
+	unit_info_layout.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	unit_info_layout.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_child(unit_info_layout)
+
+	unit_identity_label = RichTextLabel.new()
+	unit_identity_label.name = "UnitIdentityLabel"
+	unit_identity_label.bbcode_enabled = true
+	unit_identity_label.scroll_active = false
+	unit_identity_label.fit_content = true
+	unit_identity_label.custom_minimum_size.y = 42.0
+	unit_identity_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	unit_identity_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	unit_info_layout.add_child(unit_identity_label)
+
 	stats_tabs = TabContainer.new()
 	stats_tabs.name = "UnitInfoTabs"
 	stats_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stats_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	margin.add_child(stats_tabs)
+	unit_info_layout.add_child(stats_tabs)
 
 	var characteristics_tab := _create_unit_info_tab("Characteristics", "CharacteristicsLabel")
 	stats_scroll = characteristics_tab["scroll"] as ScrollContainer
@@ -381,10 +402,13 @@ func _position_stats_panel_for_unit(unit: Unit) -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var max_content_width: float = max(300.0, viewport_size.x - 48.0)
 	var measured_width: float = maxf(
-		_measure_label_text_width(stats_label, max_content_width),
+		_measure_label_text_width(unit_identity_label, max_content_width),
 		maxf(
-			_measure_label_text_width(equipment_label, max_content_width),
-			_measure_label_text_width(skills_label, max_content_width)
+			_measure_label_text_width(stats_label, max_content_width),
+			maxf(
+				_measure_label_text_width(equipment_label, max_content_width),
+				_measure_label_text_width(skills_label, max_content_width)
+			)
 		)
 	)
 	var content_width: float = clampf(maxf(300.0, measured_width), 300.0, max_content_width)
@@ -392,15 +416,18 @@ func _position_stats_panel_for_unit(unit: Unit) -> void:
 	var equipment_height: float = _measure_label_text_height(equipment_label, content_width)
 	var skills_height: float = _measure_label_text_height(skills_label, content_width)
 	var content_height: float = maxf(stats_height, maxf(equipment_height, skills_height))
+	var identity_height: float = maxf(42.0, _measure_label_text_height(unit_identity_label, content_width))
+	_set_unit_info_label_size(unit_identity_label, content_width, identity_height)
 	_set_unit_info_label_size(stats_label, content_width, stats_height)
 	_set_unit_info_label_size(equipment_label, content_width, equipment_height)
 	_set_unit_info_label_size(skills_label, content_width, skills_height)
 
 	var panel_width: float = content_width + 16.0
-	var desired_height: float = maxf(180.0, content_height + 56.0)
-	var panel_height: float = min(desired_height, max(180.0, viewport_size.y - 32.0))
-	stats_tabs.custom_minimum_size = Vector2(content_width, panel_height - 16.0)
-	var scroll_height: float = maxf(100.0, panel_height - 52.0)
+	var desired_height: float = maxf(220.0, content_height + identity_height + 64.0)
+	var panel_height: float = min(desired_height, max(220.0, viewport_size.y - 32.0))
+	var tabs_height: float = maxf(140.0, panel_height - identity_height - 22.0)
+	stats_tabs.custom_minimum_size = Vector2(content_width, tabs_height)
+	var scroll_height: float = maxf(100.0, tabs_height - 36.0)
 	for scroll in [stats_scroll, equipment_scroll, skills_scroll]:
 		if scroll != null:
 			scroll.custom_minimum_size = Vector2(content_width, scroll_height)
@@ -409,6 +436,7 @@ func _position_stats_panel_for_unit(unit: Unit) -> void:
 	var is_enemy: bool = unit != null and unit.faction == Unit.Faction.ENEMY
 	var panel_x: float = viewport_size.x - panel_width - 16.0 if is_enemy else 16.0
 	var alignment := HORIZONTAL_ALIGNMENT_RIGHT if is_enemy else HORIZONTAL_ALIGNMENT_LEFT
+	unit_identity_label.horizontal_alignment = alignment
 	stats_label.horizontal_alignment = alignment
 	equipment_label.horizontal_alignment = alignment
 	skills_label.horizontal_alignment = alignment
@@ -455,11 +483,18 @@ func _measure_label_text_height(label: RichTextLabel, content_width: float) -> f
 	return max(1.0, measured.y + float(line_separation * max(0, line_count - 1)))
 
 
-func _refresh_unit_detail_tabs(unit: Unit) -> void:
+func _refresh_unit_window(unit: Unit) -> void:
 	if unit == null or not is_instance_valid(unit):
+		unit_identity_label.text = ""
+		stats_label.text = ""
 		equipment_label.text = ""
 		skills_label.text = ""
 		return
+	unit_identity_label.text = "[b]%s[/b]\nClass: %s" % [
+		unit.get_display_name(),
+		unit.get_class_display_name(),
+	]
+	stats_label.text = _build_characteristics_text(unit)
 	equipment_label.text = _build_equipment_text(unit)
 	skills_label.text = _build_skills_text(unit)
 
@@ -471,70 +506,24 @@ func _strip_bbcode_tags(text_value: String) -> String:
 	return expression.sub(text_value, "", true)
 
 
-func _build_default_unit_stats_text(unit: Unit) -> String:
-	var crit_chance: int = int(unit.precision / 5)
-	var attack_type: String = "Ranged Attack" if unit.attack_range > 1 else "Melee Attack"
-	var attack_line: String = "Dmg: %d | Hit: %d%% | Crit: %d%%" % [unit.strength, unit.precision, crit_chance]
-	if unit.attack_range > 1:
-		attack_line += " | Rng: %d" % unit.attack_range
-	return "[b]%s[/b]\nHP: %d/%d | Arm: %d | Evd: %d\n\n%s\n%s\n\nCharacteristics\nHP: %d | Str: %d | Spd: %d | Dex: %d | Int: %d" % [
-		unit.get_display_name(),
-		unit.current_hp,
+func _build_characteristics_text(unit: Unit) -> String:
+	return "[b]Health[/b]: %d    Growth: %d%%\n[b]Strength[/b]: %d    Growth: %d%%\n[b]Speed[/b]: %d    Growth: %d%%\n[b]Dexterity[/b]: %d    Growth: %d%%\n[b]Intellect[/b]: %d    Growth: %d%%" % [
 		unit.health,
-		unit.armor,
-		unit.speed,
-		attack_type,
-		attack_line,
-		unit.health,
+		unit.health_growth_rate,
 		unit.strength,
+		unit.strength_growth_rate,
 		unit.speed,
+		unit.speed_growth_rate,
 		unit.precision,
+		unit.dexterity_growth_rate,
 		unit.intellect,
+		unit.intellect_growth_rate,
 	]
 
 
-func _build_equipment_text(unit: Unit) -> String:
-	return "[b]%s[/b]\n\n[b]Weapon[/b]\nNone — prototype basic attack\n\n[b]Armor[/b]\nNone\n\n[b]Shield[/b]\nNone\n\n[i]Equipment data is not implemented yet.[/i]" % unit.get_display_name()
+func _build_equipment_text(_unit: Unit) -> String:
+	return "[b]Weapon[/b]\nNone — prototype basic attack\n\n[b]Armor[/b]\nNone\n\n[b]Shield[/b]\nNone\n\n[i]Equipment data is not implemented yet.[/i]"
 
 
-func _build_skills_text(unit: Unit) -> String:
-	return "[b]%s[/b]\n\n[b]Weapon Attack[/b]\nBasic Attack — damage: Strength\n\n[b]Active Skills[/b]\nNone\n\n[b]Passive Skills[/b]\nNone\n\n[i]Data-driven skills are not implemented yet.[/i]" % unit.get_display_name()
-
-
-func _build_combat_preview_text(attacker: Unit, defender: Unit, attacker_cell: Vector2i) -> String:
-	var forecast: Dictionary = CombatResolver.forecast(attacker, defender, attacker_cell)
-	if not bool(forecast.get("can_attack", false)):
-		return "Combat Preview\nCannot attack from current position."
-
-	var attacker_hit: int = attacker.get_hit_chance_against(defender)
-	var defender_hit: int = defender.get_hit_chance_against(attacker)
-	var attacker_damage: int = attacker.get_physical_damage()
-	var defender_damage: int = defender.get_physical_damage()
-	var attacker_hp_after: int = int(forecast["attacker_hp_after"])
-	var defender_hp_after: int = int(forecast["defender_hp_after"])
-	var first_striker: String = "Attacker" if bool(forecast["attacker_strikes_first"]) else "Defender"
-
-	return "Combat Preview\nFirst strike: %s\n\nAttacker (%s)\nHP: %d/%d\nStrength: %d\nSpeed: %d\nDexterity: %d\nHit: %d%%\nDamage: %d\nHP After (if hits): %d\n\nDefender (%s)\nHP: %d/%d\nStrength: %d\nSpeed: %d\nDexterity: %d\nHit: %d%%\nDamage: %d\nHP After (if hits): %d" % [
-		first_striker,
-		_faction_label(attacker),
-		attacker.current_hp,
-		attacker.health,
-		attacker.strength,
-		attacker.speed,
-		attacker.precision,
-		attacker_hit,
-		attacker_damage,
-		attacker_hp_after,
-		_faction_label(defender),
-		defender.current_hp,
-		defender.health,
-		defender.strength,
-		defender.speed,
-		defender.precision,
-		defender_hit,
-		defender_damage,
-		defender_hp_after,
-	]
-
-func _faction_label(unit: Unit) -> String:
-	return "Enemy" if unit != null and unit.faction == Unit.Faction.ENEMY else "Player"
+func _build_skills_text(_unit: Unit) -> String:
+	return "[b]Weapon Attack[/b]\nBasic Attack — damage: Strength\n\n[b]Active Skills[/b]\nNone\n\n[b]Passive Skills[/b]\nNone\n\n[i]Data-driven skills are not implemented yet.[/i]"

@@ -2,6 +2,9 @@
 
 Status: working design draft v0.1
 
+See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the current state
+of every system described here.
+
 This document defines the intended character, progression, equipment, skill,
 and combat systems. Numerical values marked **initial tuning value** are a
 coherent prototype baseline, not final balance.
@@ -61,10 +64,11 @@ use permanent characteristics after permanent level-up gains.
 
 ## Unit information interface
 
-Selecting or inspecting a unit opens one contextual window with three tabs:
+Selecting or inspecting a unit opens one contextual window. The unit name and
+class name appear in a header above three tabs:
 
-1. **Characteristics** — identity, HP, core characteristics, derived combat
-   values, and the combat forecast when targeting an enemy.
+1. **Characteristics** — only the five core characteristics and the growth rate
+   of each characteristic.
 2. **Equipment** — weapon, armor, shield or off-hand, their requirements, and
    their relevant combat values.
 3. **Skills** — the granted Weapon Attack plus active, passive, and reaction
@@ -443,9 +447,10 @@ These values need playtesting before they become final:
 ## Current prototype gap
 
 The current code implements HP, Strength, Speed, `Precision`, Intellect, Armor,
-and basic hit rolls. It does not yet implement the formulas in this document for
-weight, equipment, Armor mitigation, critical hits, skills, EXP, growth, or
-classes.
+basic hit rolls, and data fields for a displayed class name and five growth
+rates. It does not yet implement the formulas in this document for weight,
+equipment, Armor mitigation, critical hits, skills, EXP, random level-up growth,
+or class eligibility and selection.
 
 The prototype currently also contains speed-based strike order and reciprocal
 attacks. Those are legacy prototype behaviors, not approved GDD rules.
