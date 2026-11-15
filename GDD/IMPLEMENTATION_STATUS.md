@@ -43,7 +43,7 @@ Status meanings:
 | --- | --- | --- |
 | Weapon-granted Weapon Attack | Partial | Equipped weapons supply the displayed attack name, damage, weight, and range, but the attack remains hard-coded rather than a granted skill resource. |
 | Automatic defensive Weapon Attack | Partial | Legacy reciprocal attacks exist, but their behavior is not the approved target rule. Exact target timing remains undecided. |
-| GDD hit formula | Implemented | Weapon Attacks use `clamp(Base Hit + Dexterity + flat Hit - target Evasion, 5, 95)`, including forest Avoid. |
+| GDD hit formula | Implemented | Weapon Attacks use `clamp(Base Hit + Dexterity + flat Hit - target Evasion, 0, 100)`, including forest Avoid. |
 | Cannot-miss property | Not implemented | No skill property system exists. |
 | Critical chance formula | Implemented | After a hit, Weapon Attacks roll `clamp(Base Crit + floor(Dexterity / 4) + flat Crit - target Evasion, 0, 100)`. |
 | Critical damage | Implemented | Critical Weapon Attacks deal `2 × Final Damage`, after Armor reduction. |

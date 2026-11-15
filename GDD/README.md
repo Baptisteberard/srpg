@@ -129,13 +129,13 @@ explicitly says otherwise.
 ```text
 Displayed Hit = clamp(
     Skill Base Hit + Dexterity + Flat Hit Modifiers - Target Evasion,
-    5,
-    95
+	0,
+	100
 )
 ```
 
-The `5–95%` bounds are the **initial tuning value**. Skills marked `cannot miss`
-skip the accuracy roll and display `100%`.
+Hit chance can therefore reach either 0% or 100%. Skills marked `cannot miss`
+skip the accuracy roll and also display `100%`.
 
 ### Critical chance
 

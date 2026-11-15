@@ -407,9 +407,14 @@ func _test_equipment() -> void:
 	accuracy_target.flat_evasion_modifier = 2
 	_expect(
 		attacker.get_accuracy() == 130 \
-		and attacker.get_hit_chance_against(accuracy_target) == 95 \
+		and attacker.get_hit_chance_against(accuracy_target) == 100 \
 		and attacker.get_critical_chance_against(accuracy_target) == 16,
-		"Accuracy and critical chance use weapon bases, Dexterity, target Evasion, and their clamps"
+		"Accuracy and critical chance use weapon bases, Dexterity, target Evasion, and their upper clamps"
+	)
+	attacker.flat_hit_modifier = -500
+	_expect(
+		attacker.get_hit_chance_against(accuracy_target) == 0,
+		"Accuracy can fall to 0%, so sufficiently inaccurate attacks always miss"
 	)
 	attacker.current_hp = 10
 	_expect(

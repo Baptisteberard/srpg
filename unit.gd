@@ -344,7 +344,7 @@ func get_physical_damage_against(target: Unit, is_critical: bool = false) -> int
 func get_hit_chance_against(target: Unit) -> int:
 	if target == null:
 		return 0
-	return clampi(get_accuracy() - target.get_evasion(), 5, 95)
+	return clampi(get_accuracy() - target.get_evasion(), 0, 100)
 
 func get_critical_chance_against(target: Unit) -> int:
 	if target == null:
