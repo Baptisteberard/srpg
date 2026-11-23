@@ -13,7 +13,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_test_fe8_map_sprite_import()
-	_test_fan_battle_packs()
+	await _test_fan_battle_packs()
 	await _test_roster_menu()
 	await _test_battle_scene("res://game.tscn", 1, 1)
 	await _test_battle_scene("res://game_map2.tscn", 2, 2)
@@ -35,12 +35,62 @@ func _run() -> void:
 
 
 func _test_fan_battle_packs() -> void:
-	var presentation = preload("res://battle/battle_presentation.gd")
-	var loader = preload("res://battle/fighter_animation_pack.gd")
-	for key in presentation.FAN_PACKS:
-		var config: Array = presentation.FAN_PACKS[key]
-		var pack = loader.load_pack(config[0], config[1], config[2])
-		_expect(pack != null, "%s loads its idle, normal and critical attacks" % key)
+	const Roster = preload("res://units/unit_roster.gd")
+	const Stage = preload("res://battle/battle_presentation.gd")
+	const UnitScene = preload("res://unit.tscn")
+	var map: Node = load("res://game.tscn").instantiate()
+	var board := map.get_node("Board") as Board
+	var locations: Dictionary = {}
+	for cell in board.get_used_cells():
+		locations[board.is_forest(cell)] = cell
+	var presentation := Stage.new()
+	root.add_child(presentation)
+	var resolver := CombatResolver.new()
+	resolver.presentation = presentation
+	var old_time_scale := Engine.time_scale
+	Engine.time_scale = 8.0
+	for index in range(Roster.ENTRIES.size()):
+		var ally := Roster.create(index, false)
+		var enemy := Roster.create(index, true)
+		var attacker := UnitScene.instantiate() as Unit
+		var defender := UnitScene.instantiate() as Unit
+		root.add_child(attacker)
+		root.add_child(defender)
+		attacker.apply_definition(ally)
+		defender.apply_definition(enemy)
+		attacker.speed = 99
+		attacker.flat_hit_modifier = 500
+		attacker.combat_board = board
+		defender.attack_range = 0
+		_expect(attacker.has_fe8_map_sprite_animation() and defender.has_fe8_map_sprite_animation(),
+			"%s has animated map sprites in both factions" % ally.unit_class_name)
+
+		var key := presentation._pack_key(attacker)
+		_expect(Stage.FAN_PACKS.has(key), "%s has a battle pack for its actual equipped weapon" % ally.unit_class_name)
+		if Stage.FAN_PACKS.has(key):
+			for mode in Stage.FAN_PACKS[key][2]:
+				var is_critical: bool = mode in [3, 6]
+				var ranged: bool = mode in [5, 6]
+				attacker.faction = Unit.Faction.ENEMY if is_critical else Unit.Faction.PLAYER
+				defender.faction = Unit.Faction.PLAYER if is_critical else Unit.Faction.ENEMY
+				attacker.flat_crit_modifier = 500 if is_critical else -500
+				attacker.cell = locations[is_critical]
+				defender.cell = attacker.cell + Vector2i(2 if ranged else 1, 0)
+				defender.set_stats(100, 0, 0, 0, 0, 0)
+				var expected_hp := 100 - attacker.get_physical_damage_against(defender, is_critical)
+				await resolver.resolve(attacker, defender)
+				_expect(presentation._uses_pack(attacker) and presentation.attack_mode == mode
+					and defender.current_hp == expected_hp and not presentation.visible,
+					"%s plays mode %d and resolves its attack" % [ally.unit_class_name, mode])
+				_expect(presentation.forest_encounter == is_critical and presentation.battle_background != null,
+					"%s selects a backdrop for mode %d's terrain" % [ally.unit_class_name, mode])
+		attacker.queue_free()
+		defender.queue_free()
+		await process_frame
+	Engine.time_scale = old_time_scale
+	presentation.queue_free()
+	map.free()
+	await process_frame
 
 func _test_roster_menu() -> void:
 	var menu_scene := (load("res://main.tscn") as PackedScene).instantiate() as Main

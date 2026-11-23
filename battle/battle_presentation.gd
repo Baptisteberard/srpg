@@ -4,10 +4,22 @@ const INK := Color("#101826")
 const GOLD := Color("#ffdc89")
 const FighterPack = preload("res://battle/fighter_animation_pack.gd")
 const BACKGROUND_DIR := "res://assets/local_battle_backgrounds/"
+const BUNDLED_BACKGROUNDS := {
+	"plains": preload("res://assets/battle_backgrounds/plains.png"),
+	"forest": preload("res://assets/battle_backgrounds/forest.png"),
+}
+const PLATFORM_SHEETS := {
+	"plains": preload("res://assets/battle_backgrounds/plains_platform.png"),
+	"forest": preload("res://assets/battle_backgrounds/forest_platform.png"),
+}
 const FAN_PACKS := {
+	"Recruit:Spear": ["recruit_lance/Lance.txt", Vector2(156, 104), [1, 3, 5, 6]],
 	"Archer:Bow": ["fletchling_bow/Bow.txt", Vector2(146, 104), [5, 6]],
 	"Brigand:Axe": ["oni_axe/Axe.txt", Vector2(160, 108), [1, 3]],
 	"Soldier:Spear": ["halberdier_lance/Lance.txt", Vector2(155, 104), [1, 3, 5, 6]],
+	"Thief:Dagger": ["hooded_knife/Knife.txt", Vector2(162, 106), [1, 3]],
+	"Fighter:Axe": ["fighter_axe/Axe.txt", Vector2(153, 105), [1, 3]],
+	"Knight:Spear": ["stalwart_lance/Lance.txt", Vector2(159, 101), [1, 3, 5, 6]],
 }
 
 var fighters: Array[Unit] = []
@@ -17,7 +29,9 @@ var outcome := ""
 var critical := false
 var forest_encounter := false
 var battle_background: Texture2D
+var battle_platform: Texture2D
 var backgrounds: Dictionary[String, Texture2D] = {}
+var platforms: Dictionary[String, Texture2D] = {}
 var fan_packs: Dictionary = {}
 var attack_mode := 1
 var attack_frame: Texture2D
@@ -35,7 +49,9 @@ func _ready() -> void:
 func begin(attacker: Unit, defender: Unit) -> void:
 	fighters.assign([attacker, defender] if attacker.faction == Unit.Faction.PLAYER else [defender, attacker])
 	forest_encounter = attacker.get_terrain_avoid() > 0 or defender.get_terrain_avoid() > 0
-	battle_background = _get_battle_background("forest" if forest_encounter else "plains")
+	var terrain := "forest" if forest_encounter else "plains"
+	battle_background = _get_battle_background(terrain)
+	battle_platform = _get_battle_platform(terrain) if battle_background == BUNDLED_BACKGROUNDS[terrain] else null
 	for fighter in fighters:
 		var key := _pack_key(fighter)
 		if FAN_PACKS.has(key) and not fan_packs.has(key):
@@ -111,34 +127,38 @@ func _get_battle_background(terrain: String) -> Texture2D:
 			var pixels := Image.load_from_file(path)
 			if pixels != null and not pixels.is_empty():
 				backgrounds[terrain] = ImageTexture.create_from_image(pixels)
+		if not backgrounds.has(terrain):
+			backgrounds[terrain] = BUNDLED_BACKGROUNDS[terrain]
 	return backgrounds.get(terrain)
 
+func _get_battle_platform(terrain: String) -> Texture2D:
+	if not platforms.has(terrain):
+		var sheet: Texture2D = PLATFORM_SHEETS[terrain]
+		var pixels := sheet.get_image().get_region(Rect2i(0, 0, 104, 32))
+		pixels.convert(Image.FORMAT_RGBA8)
+		var key := pixels.get_pixel(0, 31)
+		for y in range(pixels.get_height()):
+			for x in range(pixels.get_width()):
+				# The next platform's top row begins at x = 88.
+				if (y < 16 and x >= 88) or pixels.get_pixel(x, y) == key:
+					pixels.set_pixel(x, y, Color.TRANSPARENT)
+		platforms[terrain] = ImageTexture.create_from_image(pixels)
+	return platforms.get(terrain)
+
 func _draw_battle_background() -> void:
-	if battle_background != null:
-		var viewport_rect := Rect2(Vector2.ZERO, size)
-		var source_size := battle_background.get_size()
-		var scale_to_cover := maxf(size.x / source_size.x, size.y / source_size.y)
-		var visible_size := size / scale_to_cover
-		var source_rect := Rect2((source_size - visible_size) * 0.5, visible_size)
-		draw_set_transform(Vector2.ZERO)
-		draw_texture_rect_region(battle_background, viewport_rect, source_rect)
-		draw_set_transform(Vector2.ZERO, 0.0, size / Vector2(960, 540))
-		draw_rect(Rect2(0, 436, 960, 104), Color(0.05, 0.08, 0.13, 0.85))
-		return
-	draw_rect(Rect2(0, 0, 960, 540), Color("#212742"))
-	draw_circle(Vector2(730, 145), 55, Color("#ded2a1"))
-	draw_colored_polygon(PackedVector2Array([Vector2(0, 350), Vector2(170, 180), Vector2(345, 320), Vector2(580, 205), Vector2(960, 335), Vector2(960, 440), Vector2(0, 440)]), Color("#393f60"))
-	if forest_encounter:
-		for index in range(13):
-			var x := float(index * 83 - 27)
-			var crown := float(155 + posmod(index * 67, 115))
-			draw_rect(Rect2(x + 37, crown + 55, 12, 360 - crown - 55), Color("#38363b"))
-			draw_colored_polygon(PackedVector2Array([
-				Vector2(x + 43, crown), Vector2(x + 89, crown + 124),
-				Vector2(x - 3, crown + 124),
-			]), Color("#2d514a") if index % 2 == 0 else Color("#355f52"))
-	draw_rect(Rect2(0, 360, 960, 180), Color("#435745") if forest_encounter else Color("#59604b"))
-	draw_line(Vector2(0, 360), Vector2(960, 360), Color("#829274"), 3)
+	var source_size := battle_background.get_size()
+	var stage := Vector2(960, 540)
+	var scale_to_cover := maxf(stage.x / source_size.x, stage.y / source_size.y)
+	var visible_size := stage / scale_to_cover
+	var source_top_left := (source_size - visible_size) * 0.5
+	if battle_platform != null:
+		# The GBA backdrop's floor ends at source row 104.
+		source_top_left.y = 8.0
+	draw_texture_rect_region(battle_background, Rect2(Vector2.ZERO, stage), Rect2(source_top_left, visible_size))
+	if battle_platform != null:
+		draw_texture_rect(battle_platform, Rect2(138, 372, 208, 64), false)
+		draw_texture_rect(battle_platform, Rect2(614, 372, 208, 64), false)
+	draw_rect(Rect2(0, 436, 960, 104), Color(0.065, 0.085, 0.12, 0.93))
 
 func _draw() -> void:
 	if fighters.size() != 2 or size.x <= 0 or size.y <= 0:
@@ -174,6 +194,9 @@ func _draw() -> void:
 			var sprite_scale := 4.0
 			draw_texture_rect(frame, Rect2(-pack.feet * sprite_scale, frame.get_size() * sprite_scale), false,
 				Color(1, 1, 1, tint.a))
+			var effect: Texture2D = pack.effects.get(frame)
+			if effect != null:
+				draw_texture_rect(effect, Rect2(-pack.feet * sprite_scale, effect.get_size() * sprite_scale), false)
 		else:
 			_draw_fighter(weapon, tint, motion)
 		draw_set_transform(Vector2.ZERO, 0.0, size / Vector2(960, 540))

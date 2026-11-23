@@ -9,13 +9,13 @@ const MAP_SPRITE_CLASSES = {
 
 # Stats and growths are ordered HP, Strength, Speed, Dexterity, Intellect.
 const ENTRIES = [
-	["Recruit", [20, 12, 8, 14, 4], [70, 40, 50, 55, 25], Gear.BASIC_SWORD, Gear.MAIL_HAUBERK, Color("#4d8ed3")],
+	["Recruit", [20, 12, 8, 14, 4], [70, 40, 50, 55, 25], Gear.BASIC_SPEAR, Gear.MAIL_HAUBERK, Color("#4d8ed3")],
 	["Brigand", [24, 14, 5, 7, 1], [80, 60, 30, 35, 5], Gear.BASIC_AXE, Gear.PADDED_GAMBESON, Color("#ad773f")],
 	["Soldier", [22, 11, 9, 12, 2], [65, 45, 45, 50, 15], Gear.BASIC_SPEAR, Gear.LAMELLAR_ARMOR, Color("#449678")],
 	["Archer", [18, 9, 11, 18, 3], [50, 35, 55, 65, 20], Gear.LONGBOW, Gear.BRIGANDINE, Color("#82994b")],
 	["Thief", [17, 8, 15, 20, 2], [45, 30, 70, 70, 15], Gear.DAGGER, Gear.PADDED_GAMBESON, Color("#9c70bf")],
-	["Fighter", [25, 13, 7, 10, 3], [75, 50, 35, 40, 20], Gear.MACE, Gear.COAT_OF_PLATES, Color("#c18d50")],
-	["Knight", [28, 16, 6, 8, 1], [85, 65, 25, 30, 10], Gear.WAR_HAMMER, Gear.STEEL_PLATE_HARNESS, Color("#7b8eb0")],
+	["Fighter", [25, 13, 7, 10, 3], [75, 50, 35, 40, 20], Gear.BASIC_AXE, Gear.COAT_OF_PLATES, Color("#c18d50")],
+	["Knight", [28, 16, 6, 8, 1], [85, 65, 25, 30, 10], Gear.BASIC_SPEAR, Gear.STEEL_PLATE_HARNESS, Color("#7b8eb0")],
 ]
 
 static func create(index: int, enemy: bool) -> UnitStats:

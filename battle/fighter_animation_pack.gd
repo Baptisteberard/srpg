@@ -4,6 +4,7 @@ const TICKS_PER_SECOND := 60.0
 const PACK_ROOT := "res://assets/fan_battle_reference/"
 
 var frames: Dictionary = {}
+var effects: Dictionary[Texture2D, Texture2D] = {}
 var modes: Dictionary = {}
 var feet: Vector2
 
@@ -55,13 +56,23 @@ func _load_frame(path: String) -> Texture2D:
 	var pixels := source.get_image()
 	pixels.convert(Image.FORMAT_RGBA8)
 	var background := pixels.get_pixel(0, 0)
+	var effect: Image
 	if pixels.get_width() == 488:
-		# The actor occupies the left 240 pixels; the extra plane is an effect overlay.
+		# Wide frames stack a second GBA canvas next to the actor.
+		effect = pixels.get_region(Rect2i(240, 0, 240, pixels.get_height()))
 		pixels = pixels.get_region(Rect2i(0, 0, 240, pixels.get_height()))
+	_remove_background(pixels, background)
+	var frame := ImageTexture.create_from_image(pixels)
+	if effect != null:
+		_remove_background(effect, background)
+		if not effect.is_invisible():
+			effects[frame] = ImageTexture.create_from_image(effect)
+	return frame
+
+func _remove_background(pixels: Image, background: Color) -> void:
 	# Preserve each full canvas so the feet stay anchored between poses.
 	# The top edge includes palette metadata outside the playable image.
 	for y in range(pixels.get_height()):
 		for x in range(pixels.get_width()):
 			if y < 4 or pixels.get_pixel(x, y) == background:
 				pixels.set_pixel(x, y, Color.TRANSPARENT)
-	return ImageTexture.create_from_image(pixels)

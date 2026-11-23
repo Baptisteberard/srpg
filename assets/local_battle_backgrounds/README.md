@@ -6,5 +6,6 @@ forest backdrop when either fighter is on a forest tile. Each PNG fills the
 screen with nearest-neighbor filtering and an aspect-preserving center crop.
 Use individual backgrounds, cropped out of any multi-image sheet.
 
-The local PNGs are ignored by Git. A missing or unreadable PNG uses the
-procedural backdrop for that terrain.
+The local PNGs are ignored by Git. A missing or unreadable PNG uses the bundled
+[community backdrop and ground platform](../battle_backgrounds/README.md) for
+that terrain.
