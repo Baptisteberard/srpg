@@ -201,13 +201,15 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 		terrain_defender.combat_board = board
 		terrain_defender.cell = open_cell
 		var open_hit := terrain_attacker.get_hit_chance_against(terrain_defender)
+		var projected_hit := terrain_attacker.get_hit_chance_against(terrain_defender, forest_cell)
 		terrain_defender.cell = forest_cell
 		var forest_hit := terrain_attacker.get_hit_chance_against(terrain_defender)
 		_expect(
 			forest_cell.x != 9999 and open_cell.x != 9999 \
 				and board.get_terrain_avoid(forest_cell) == Board.FOREST_AVOID \
 				and forest_evasion == open_evasion + Board.FOREST_AVOID \
-				and forest_hit == open_hit - Board.FOREST_AVOID,
+				and forest_hit == open_hit - Board.FOREST_AVOID \
+				and projected_hit == forest_hit,
 			"Map 1 forest tiles grant +%d Evasion" % Board.FOREST_AVOID
 		)
 		terrain_attacker.free()
@@ -219,18 +221,28 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 		var healer: Unit = manager.player_units[0]
 		healer.take_damage(8)
 		var hp_before_heal := healer.current_hp
-		manager._select_unit(healer)
-		hud.focus_unit(healer)
+		await manager._on_cell_clicked(healer.cell)
+		var start := healer.cell
+		if not manager.selected_reach_dests.is_empty():
+			await manager._on_cell_clicked(manager.selected_reach_dests[0])
+		var moved_before_healing := healer.cell != start and manager.selected == healer and not healer.has_acted
 		unit_info_tabs.current_tab = 2
 		await process_frame
 		var expected_healing := healer.get_healing_amount(SkillCatalog.HEAL)
 		skill_action_button.pressed.emit()
 		await process_frame
-		self_heal_works = healer.has_active_skill(SkillCatalog.HEAL) \
+		self_heal_works = moved_before_healing and healer.has_active_skill(SkillCatalog.HEAL) \
 			and skill_action_button.visible \
 			and healer.current_hp == mini(healer.health, hp_before_heal + expected_healing) \
 			and healer.has_acted
-	_expect(self_heal_works, "%s lets the primary player use Heal on self and spend the action" % scene_path)
+	_expect(self_heal_works, "%s lets the primary player move, use Heal, and spend the action" % scene_path)
+	if manager != null:
+		manager.end_turn_button.pressed.emit()
+		var deadline := Time.get_ticks_msec() + 8000
+		while manager.phase == TurnManager.Phase.ENEMY and Time.get_ticks_msec() < deadline:
+			await process_frame
+		_expect(manager.phase == TurnManager.Phase.PLAYER and not manager.end_turn_button.disabled,
+			"%s runs the enemy phase and returns control to the player" % scene_path)
 	var progression_ui_works := false
 	if hud != null \
 	and manager != null \

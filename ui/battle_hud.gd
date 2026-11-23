@@ -656,12 +656,15 @@ func _build_skills_text(unit: Unit) -> String:
 		target = preview_attacker
 	var target_result := ""
 	if target != null and target.is_alive():
+		var target_cell := preview_attacker_cell if target == preview_attacker else target.cell
 		target_result = "\n[b]Against %s[/b]\nHit: %d%% | Crit: %d%% | Target Evasion: %d" % [
 			target.get_display_name(),
-			unit.get_hit_chance_against(target),
-			unit.get_critical_chance_against(target),
-			target.get_evasion(),
+			unit.get_hit_chance_against(target, target_cell),
+			unit.get_critical_chance_against(target, target_cell),
+			target.get_evasion(target_cell),
 		]
+		if unit == preview_defender and not unit.can_attack_from_cell(unit.cell, target_cell):
+			target_result = "\n[b]Against %s[/b]\nOut of range" % target.get_display_name()
 	var active_lines: Array[String] = []
 	for skill in unit.active_skills:
 		if skill != null and skill.is_healing_skill():

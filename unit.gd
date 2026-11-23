@@ -341,16 +341,18 @@ func get_physical_damage_against(target: Unit, is_critical: bool = false) -> int
 	var final_damage := maxi(0, get_physical_damage() - target.get_armor_value())
 	return final_damage * 2 if is_critical else final_damage
 
-func get_hit_chance_against(target: Unit) -> int:
+func get_hit_chance_against(target: Unit, target_cell = null) -> int:
 	if target == null:
 		return 0
-	return clampi(get_accuracy() - target.get_evasion(), 0, 100)
+	var evasion := target.get_evasion() if target_cell == null else target.get_evasion(target_cell)
+	return clampi(get_accuracy() - evasion, 0, 100)
 
-func get_critical_chance_against(target: Unit) -> int:
+func get_critical_chance_against(target: Unit, target_cell = null) -> int:
 	if target == null:
 		return 0
+	var evasion := target.get_evasion() if target_cell == null else target.get_evasion(target_cell)
 	return clampi(
-		get_weapon_base_crit() + dexterity / 3 + flat_crit_modifier - target.get_evasion(),
+		get_weapon_base_crit() + dexterity / 3 + flat_crit_modifier - evasion,
 		0,
 		100
 	)

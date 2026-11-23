@@ -374,9 +374,18 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	selected_has_moved = true
 	selected_last_move_path = path.duplicate()
 	_update_selection()
-	if selected != null and not _has_attackable_enemy(selected):
+	if selected != null and not _has_post_move_action(selected):
 		_finish_selected_action()
 	action_state = ActionState.IDLE
+
+func _has_post_move_action(unit: Unit) -> bool:
+	if _has_attackable_enemy(unit):
+		return true
+	if unit.current_hp < unit.health:
+		for skill in unit.active_skills:
+			if skill != null and skill.is_healing_skill():
+				return true
+	return false
 
 func _run_enemy_phase() -> void:
 	action_state = ActionState.ENEMY_TURN
@@ -949,7 +958,7 @@ func _handle_right_click_cancel() -> bool:
 		return false
 
 	if selected != null:
-		if selected_has_moved and _has_attackable_enemy(selected):
+		if selected_has_moved and _has_post_move_action(selected):
 			if _undo_selected_move():
 				return true
 		_clear_selection()
@@ -967,7 +976,7 @@ func _undo_selected_move() -> bool:
 		return false
 	if not selected_has_moved:
 		return false
-	if not _has_attackable_enemy(selected):
+	if not _has_post_move_action(selected):
 		return false
 	if selected_origin_cell == selected.cell:
 		return false
