@@ -215,8 +215,6 @@ func _draw() -> void:
 			_label(Vector2(414, 115), "CRITICAL", 25)
 		elif not outcome.is_empty():
 			var impact_x := 695.0 if target == fighters[1] else 220.0
-			if outcome != "MISS":
-				draw_arc(Vector2(impact_x, 297), 40.0 * progress, -1.1, 1.1, 16, GOLD, 5.0, true)
 			_label(Vector2(impact_x - 65, 205), outcome, 25)
 
 func _draw_fighter(weapon: String, tint: Color, motion: float) -> void:
