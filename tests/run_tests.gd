@@ -116,8 +116,24 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 			and not characteristics_label.text.contains("Damage") \
 			and equipment_label.text.contains(focused_unit.equipped_weapon.display_name) \
 			and equipment_label.text.contains(focused_unit.equipped_armor.display_name) \
-			and not skills_label.text.is_empty()
+			and skills_label.text.contains("Hit Formula") \
+			and skills_label.text.contains("Crit Formula") \
+			and skills_label.text.contains("Hit = clamp(Base Hit") \
+			and skills_label.text.contains("Target Evasion, 0, 100)")
 	_expect(unit_tabs_work, "%s shows one unit window with three information tabs" % scene_path)
+	var target_odds_work := false
+	if manager != null and hud != null and skills_label != null \
+	and not manager.player_units.is_empty() and not manager.enemy_units.is_empty():
+		var odds_attacker: Unit = manager.player_units[0]
+		var odds_defender: Unit = manager.enemy_units[0]
+		hud.focus_unit(odds_attacker)
+		hud.show_combat_preview(odds_attacker, odds_defender, odds_attacker.cell)
+		target_odds_work = skills_label.text.contains("Against %s" % odds_defender.get_display_name()) \
+			and skills_label.text.contains("Hit: %d%%" % odds_attacker.get_hit_chance_against(odds_defender)) \
+			and skills_label.text.contains("Crit: %d%%" % odds_attacker.get_critical_chance_against(odds_defender)) \
+			and skills_label.text.contains("Target Evasion: %d" % odds_defender.get_evasion())
+		hud.clear_combat_preview()
+	_expect(target_odds_work, "%s displays final Hit and Crit chances against the previewed target" % scene_path)
 	if scene_path == "res://game.tscn" and manager != null and board != null:
 		var forest_cell := Vector2i(9999, 9999)
 		var open_cell := Vector2i(9999, 9999)

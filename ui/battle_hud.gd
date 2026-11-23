@@ -639,6 +639,29 @@ func _build_skills_text(unit: Unit) -> String:
 	var attack_name := "Unarmed Attack"
 	if unit.equipped_weapon != null:
 		attack_name = "%s Attack" % str(unit.equipped_weapon.weapon_type)
+	var dexterity_crit: int = unit.dexterity / 4
+	var formulas := "[b]Hit Formula[/b]\nHit = clamp(Base Hit %d + Dexterity %d + Flat Hit %d - Target Evasion, 0, 100)\n[b]Crit Formula[/b]\nCrit = clamp(Base Crit %d + floor(Dexterity %d / 4) + Flat Crit %d - Target Evasion, 0, 100)\nDexterity Crit contribution: %d" % [
+		unit.get_weapon_base_hit(),
+		unit.dexterity,
+		unit.flat_hit_modifier,
+		unit.get_weapon_base_crit(),
+		unit.dexterity,
+		unit.flat_crit_modifier,
+		dexterity_crit,
+	]
+	var target: Unit = null
+	if preview_attacker == unit and preview_defender != null and is_instance_valid(preview_defender):
+		target = preview_defender
+	elif preview_defender == unit and preview_attacker != null and is_instance_valid(preview_attacker):
+		target = preview_attacker
+	var target_result := ""
+	if target != null and target.is_alive():
+		target_result = "\n[b]Against %s[/b]\nHit: %d%% | Crit: %d%% | Target Evasion: %d" % [
+			target.get_display_name(),
+			unit.get_hit_chance_against(target),
+			unit.get_critical_chance_against(target),
+			target.get_evasion(),
+		]
 	var active_lines: Array[String] = []
 	for skill in unit.active_skills:
 		if skill != null and skill.is_healing_skill():
@@ -647,13 +670,13 @@ func _build_skills_text(unit: Unit) -> String:
 				unit.get_healing_amount(skill),
 			])
 	var active_text := "None" if active_lines.is_empty() else "\n".join(active_lines)
-	return "[b]Weapon Attack[/b]\n%s\nPhysical Power: %d (Strength %d + Weapon %d)\nAccuracy: %d | Base Crit: %d%%\n\n[b]Active Skills[/b]\n%s\n\n[b]Passive Skills[/b]\nNone" % [
+	return "[b]Weapon Attack[/b]\n%s\nPhysical Power: %d (Strength %d + Weapon %d)\n\n%s%s\n\n[b]Active Skills[/b]\n%s\n\n[b]Passive Skills[/b]\nNone" % [
 		attack_name,
 		unit.get_physical_damage(),
 		unit.strength,
 		unit.get_weapon_damage(),
-		unit.get_accuracy(),
-		unit.get_weapon_base_crit(),
+		formulas,
+		target_result,
 		active_text,
 	]
 

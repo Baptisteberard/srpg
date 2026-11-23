@@ -24,7 +24,7 @@ Status meanings:
 | Unit name and class header | Implemented | The focused unit's individual name and displayed class appear above the tabs. |
 | Characteristics tab | Implemented | Shows only the five characteristics and their growth rates. |
 | Equipment tab | Partial | Displays the equipped weapon, armor, damage, protection, range, weight, Weight Penalty, and Battle Speed. Inventory management, shields, and requirements do not exist. |
-| Skills tab | Partial | Displays the equipped Weapon Attack and data-driven active skills. The primary Recruit can use the self-target Heal skill; a general targeting interface does not exist. |
+| Skills tab | Partial | Displays the full Hit and Crit formulas, final odds against a previewed target, the equipped Weapon Attack, and data-driven active skills. The primary Recruit can use the self-target Heal skill; a general targeting interface does not exist. |
 
 ## Weight and derived combat values
 
