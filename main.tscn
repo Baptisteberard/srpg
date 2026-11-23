@@ -14,10 +14,17 @@ map2_scene = ExtResource("3_map2")
 [node name="Menu" type="CanvasLayer" parent="."]
 
 [node name="Panel" type="PanelContainer" parent="Menu"]
-offset_left = 500.0
-offset_top = 250.0
-offset_right = 780.0
-offset_bottom = 470.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -170.0
+offset_top = -225.0
+offset_right = 170.0
+offset_bottom = 225.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="Menu/Panel"]
 layout_mode = 2
@@ -26,7 +33,23 @@ theme_override_constants/separation = 14
 [node name="Title" type="Label" parent="Menu/Panel/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "Choose Map"
+text = "Choose Your Unit"
+horizontal_alignment = 1
+
+[node name="UnitPicker" type="OptionButton" parent="Menu/Panel/VBox"]
+layout_mode = 2
+
+[node name="SpritePreview" type="Control" parent="Menu/Panel/VBox"]
+custom_minimum_size = Vector2(0, 76)
+layout_mode = 2
+
+[node name="Sprite" type="AnimatedSprite2D" parent="Menu/Panel/VBox/SpritePreview"]
+texture_filter = 1
+position = Vector2(166, 38)
+scale = Vector2(2, 2)
+
+[node name="UnitDetails" type="Label" parent="Menu/Panel/VBox"]
+layout_mode = 2
 horizontal_alignment = 1
 
 [node name="Map1Button" type="Button" parent="Menu/Panel/VBox"]

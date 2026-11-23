@@ -13,6 +13,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_test_fe8_map_sprite_import()
+	await _test_roster_menu()
 	await _test_battle_scene("res://game.tscn", 1, 1)
 	await _test_battle_scene("res://game_map2.tscn", 2, 2)
 	await _test_reachable_cells()
@@ -30,6 +31,26 @@ func _run() -> void:
 		push_error("FAIL: %s" % failure)
 	print("FAIL: %d of %d SRPG checks failed" % [failures.size(), checks_run])
 	quit(1)
+
+
+func _test_roster_menu() -> void:
+	var menu_scene := (load("res://main.tscn") as PackedScene).instantiate() as Main
+	root.add_child(menu_scene)
+	var all_animated := menu_scene.roster.size() == 7
+	for definition in menu_scene.roster:
+		all_animated = all_animated and definition.fe8_map_sprite_animation.is_valid()
+	_expect(all_animated, "Every selectable unit has a working animation")
+	menu_scene.picker.select(3)
+	menu_scene.picker.item_selected.emit(3)
+	menu_scene.map2_button.pressed.emit()
+	var manager := menu_scene.game_root.find_child("TurnManager", true, false) as TurnManager
+	_expect(manager != null and manager.player_units.size() == 2
+		and manager.player_units[0].unit_class_name == "Archer"
+		and manager.enemy_units.size() == 2
+		and manager.enemy_units[0].unit_class_name != manager.enemy_units[1].unit_class_name,
+		"Map 2 starts with the selected unit and two distinct roster enemies")
+	menu_scene.queue_free()
+	await process_frame
 
 
 func _test_battle_scene(scene_path: String, expected_players: int, expected_enemies: int) -> void:

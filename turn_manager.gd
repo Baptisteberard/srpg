@@ -785,7 +785,7 @@ func _build_attack_choice_from_path(attacker: Unit, defender: Unit, path_candida
 
 	if stand_cell != attacker.cell and occ.has(stand_cell):
 		return {}
-	if _manhattan(stand_cell, defender.cell) > attacker.attack_range:
+	if not attacker.can_attack_from_cell(stand_cell, defender.cell):
 		return {}
 
 	return {"cell": stand_cell, "path": path}
@@ -806,7 +806,7 @@ func _find_attack_position(attacker: Unit, defender: Unit) -> Dictionary:
 			continue
 		if cell != attacker.cell and occ.has(cell):
 			continue
-		if abs(cell.x - defender.cell.x) + abs(cell.y - defender.cell.y) > attacker.attack_range:
+		if not attacker.can_attack_from_cell(cell, defender.cell):
 			continue
 		if not found or d < best_dist or (d == best_dist and _cell_precedes(cell, best_cell)):
 			found = true
