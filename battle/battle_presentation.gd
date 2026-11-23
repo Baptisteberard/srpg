@@ -35,6 +35,10 @@ var platforms: Dictionary[String, Texture2D] = {}
 var fan_packs: Dictionary = {}
 var attack_mode := 1
 var attack_frame: Texture2D
+var defeat_opacity := 1.0:
+	set(value):
+		defeat_opacity = value
+		queue_redraw()
 var progress := 0.0:
 	set(value):
 		progress = value
@@ -68,6 +72,7 @@ func windup(attacker: Unit, defender: Unit, is_critical: bool) -> void:
 	critical = is_critical
 	outcome = ""
 	progress = 0.0
+	defeat_opacity = 1.0
 	if _uses_pack(attacker):
 		var ranged := attacker.equipped_weapon.weapon_type == &"Bow" \
 			or (attacker.equipped_weapon.weapon_type == &"Spear" and attacker.cell.distance_squared_to(defender.cell) > 1)
@@ -94,6 +99,15 @@ func impact(hit: bool, damage: int) -> void:
 	var recovery := create_tween()
 	recovery.tween_property(self, "progress", 0.0, 0.20)
 	await recovery.finished
+	if is_instance_valid(target) and not target.is_alive():
+		outcome = ""
+		# Keep the defeated unit anchored while its pixel silhouette fades.
+		var defeat := create_tween()
+		defeat.tween_property(self, "defeat_opacity", 0.3, 0.13)
+		defeat.tween_property(self, "defeat_opacity", 1.0, 0.12)
+		defeat.tween_property(self, "defeat_opacity", 0.0, 0.85)
+		defeat.tween_interval(0.12)
+		await defeat.finished
 	striker = null
 	attack_frame = null
 	target = null
@@ -181,24 +195,11 @@ func _draw() -> void:
 		var tint := Color("#60b9ba") if index == 0 else Color("#dc846b")
 		if unit == target and not outcome.is_empty() and outcome != "MISS":
 			tint = tint.lerp(GOLD, progress * 0.5)
-		if unit.current_hp == 0:
-			origin.y += 25 * progress
-			tint.a = 0.35
-		var stage_scale := size / Vector2(960, 540)
-		draw_set_transform(origin * stage_scale, 0.0, Vector2(facing, 1) * stage_scale)
-		if _uses_pack(unit):
-			var pack = fan_packs[_pack_key(unit)]
-			var frame: Texture2D = attack_frame if unit == striker and attack_frame != null else pack.modes[10]["windup"][0][0]
-			# The source actor faces left. Mirror around the feet for the left slot.
-			draw_set_transform(origin * stage_scale, 0.0, Vector2(-facing, 1) * stage_scale)
-			var sprite_scale := 4.0
-			draw_texture_rect(frame, Rect2(-pack.feet * sprite_scale, frame.get_size() * sprite_scale), false,
-				Color(1, 1, 1, tint.a))
-			var effect: Texture2D = pack.effects.get(frame)
-			if effect != null:
-				draw_texture_rect(effect, Rect2(-pack.feet * sprite_scale, effect.get_size() * sprite_scale), false)
-		else:
-			_draw_fighter(weapon, tint, motion)
+		var opacity := 1.0
+		if not unit.is_alive():
+			opacity = snappedf(defeat_opacity, 1.0 / 12.0) if unit == target else 0.0
+		if opacity > 0.0:
+			_draw_combatant_sprite(unit, origin, facing, weapon, Color(tint, opacity), motion)
 		draw_set_transform(Vector2.ZERO, 0.0, size / Vector2(960, 540))
 		var x := 50.0 if index == 0 else 610.0
 		_label(Vector2(x, 455), unit.get_display_name() + "  /  " + unit.get_class_display_name(), 20)
@@ -217,34 +218,53 @@ func _draw() -> void:
 			var impact_x := 695.0 if target == fighters[1] else 220.0
 			_label(Vector2(impact_x - 65, 205), outcome, 25)
 
+func _draw_combatant_sprite(unit: Unit, origin: Vector2, facing: float, weapon: String, tint: Color, motion: float) -> void:
+	var stage_scale := size / Vector2(960, 540)
+	if not _uses_pack(unit):
+		draw_set_transform(origin * stage_scale, 0.0, Vector2(facing, 1) * stage_scale)
+		_draw_fighter(weapon, tint, motion)
+		return
+	var pack = fan_packs[_pack_key(unit)]
+	var frame: Texture2D = attack_frame if unit == striker and attack_frame != null else pack.modes[10]["windup"][0][0]
+	# The source actor faces left. Mirror around the feet for the left slot.
+	draw_set_transform(origin * stage_scale, 0.0, Vector2(-facing, 1) * stage_scale)
+	var sprite_scale := 4.0
+	var frame_tint := Color(1, 1, 1, tint.a)
+	draw_texture_rect(frame, Rect2(-pack.feet * sprite_scale, frame.get_size() * sprite_scale), false, frame_tint)
+	var effect: Texture2D = pack.effects.get(frame)
+	if effect != null:
+		draw_texture_rect(effect, Rect2(-pack.feet * sprite_scale, effect.get_size() * sprite_scale), false, frame_tint)
+
 func _draw_fighter(weapon: String, tint: Color, motion: float) -> void:
+	var outline := Color(INK, tint.a)
+	var gold := Color(GOLD, tint.a)
 	var heavy := weapon in ["axe", "mace", "hammer"]
 	var lean := Vector2(motion * 16.0, -sin(motion * PI) * 8.0)
 	var shoulder := Vector2(8, -92) + lean
-	draw_line(Vector2(-25, -49), Vector2(-39 - motion * 23, 0), INK, 22)
-	draw_line(Vector2(19, -49), Vector2(34 + motion * 12, 0), INK, 22)
+	draw_line(Vector2(-25, -49), Vector2(-39 - motion * 23, 0), outline, 22)
+	draw_line(Vector2(19, -49), Vector2(34 + motion * 12, 0), outline, 22)
 	draw_colored_polygon(PackedVector2Array([Vector2(-36, -98) + lean, Vector2(26, -99) + lean, Vector2(30, -47), Vector2(-29, -44)]), tint)
-	draw_line(Vector2(-30, -54), Vector2(28, -54), INK, 8)
-	draw_circle(Vector2(-10, -119) + lean, 22 if heavy else 18, INK)
+	draw_line(Vector2(-30, -54), Vector2(28, -54), outline, 8)
+	draw_circle(Vector2(-10, -119) + lean, 22 if heavy else 18, outline)
 	draw_rect(Rect2(Vector2(-12, -124) + lean, Vector2(22, 12)), tint.lightened(0.55))
 	var hand := shoulder + Vector2(lerpf(12, 49, motion), lerpf(22, -2, motion))
 	draw_line(shoulder, hand, tint.lightened(0.22), 16)
-	var steel := Color("#dadfea")
+	var steel := Color(Color("#dadfea"), tint.a)
 	match weapon:
 		"bow":
-			draw_arc(hand, 31, -PI / 2, PI / 2, 20, GOLD, 5, true)
+			draw_arc(hand, 31, -PI / 2, PI / 2, 20, gold, 5, true)
 			draw_polyline(PackedVector2Array([hand + Vector2(0, -31), hand + Vector2(-26 * (1.0 - motion), 0), hand + Vector2(0, 31)]), steel, 2, true)
 			if motion > 0.35:
 				var arrow := hand + Vector2((motion - 0.35) * 600.0, 0)
-				draw_line(arrow - Vector2(40, 0), arrow, GOLD, 3)
+				draw_line(arrow - Vector2(40, 0), arrow, gold, 3)
 		"spear":
-			draw_line(hand - Vector2(32, -10), hand + Vector2(82, -18), GOLD, 5)
+			draw_line(hand - Vector2(32, -10), hand + Vector2(82, -18), gold, 5)
 			draw_line(hand + Vector2(70, -16), hand + Vector2(92, -20), steel, 8)
 		_:
 			var angle := lerpf(-2.35, 0.15 if heavy else -0.42, motion)
 			var length := 30.0 if weapon == "dagger" or weapon == "unarmed" else 57.0
 			var tip := hand + Vector2.from_angle(angle) * length
-			draw_line(hand, tip, GOLD if heavy else steel, 6 if heavy else 8)
+			draw_line(hand, tip, gold if heavy else steel, 6 if heavy else 8)
 			if weapon == "mace":
 				draw_circle(tip, 10, steel)
 			elif weapon == "axe":
@@ -254,7 +274,7 @@ func _draw_fighter(weapon: String, tint: Color, motion: float) -> void:
 			elif heavy:
 				draw_line(tip - Vector2.from_angle(angle + PI / 2) * 13, tip + Vector2.from_angle(angle + PI / 2) * 13, steel, 13 if weapon == "hammer" else 9)
 			elif weapon == "sword":
-				draw_line(hand - Vector2(0, 9), hand + Vector2(0, 9), GOLD, 5)
+				draw_line(hand - Vector2(0, 9), hand + Vector2(0, 9), gold, 5)
 
 func _label(position: Vector2, caption: String, font_size: int) -> void:
 	draw_string(ThemeDB.fallback_font, position, caption, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color("#f2edf0"))

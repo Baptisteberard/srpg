@@ -149,8 +149,16 @@ func _test_roster_menu() -> void:
 		_expect(pack != null and pack.frames.size() == 31 and not pack.modes[5]["windup"].is_empty()
 			and not pack.modes[6]["windup"].is_empty(),
 			"Archer combat loads the fan pack and both timed attack sequences")
+		var saw_partial_fade := false
+		var saw_invisible_before_close := false
 		while presentation.visible:
+			var opacity: float = exchange.presentation.defeat_opacity
+			if not enemy.is_alive():
+				saw_partial_fade = saw_partial_fade or (opacity > 0.0 and opacity < 1.0)
+				saw_invisible_before_close = saw_invisible_before_close or is_zero_approx(opacity)
 			await process_frame
+		_expect(saw_partial_fade and saw_invisible_before_close,
+			"The lethal-hit sprite fades all the way out before the battle closes")
 		_expect(not enemy.is_alive() and not manager.enemy_units.has(enemy),
 			"Lethal impact updates HP, removes the defeated unit, and closes the presentation")
 		while is_instance_valid(enemy):
