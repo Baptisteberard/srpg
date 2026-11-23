@@ -8,6 +8,7 @@ var striker: Unit
 var target: Unit
 var outcome := ""
 var critical := false
+var forest_encounter := false
 var progress := 0.0:
 	set(value):
 		progress = value
@@ -20,6 +21,7 @@ func _ready() -> void:
 
 func begin(attacker: Unit, defender: Unit) -> void:
 	fighters.assign([attacker, defender] if attacker.faction == Unit.Faction.PLAYER else [defender, attacker])
+	forest_encounter = attacker.get_terrain_avoid() > 0 or defender.get_terrain_avoid() > 0
 	outcome = ""
 	show()
 	queue_redraw()
@@ -61,8 +63,17 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 0, 960, 540), Color("#212742"))
 	draw_circle(Vector2(730, 145), 55, Color("#ded2a1"))
 	draw_colored_polygon(PackedVector2Array([Vector2(0, 350), Vector2(170, 180), Vector2(345, 320), Vector2(580, 205), Vector2(960, 335), Vector2(960, 440), Vector2(0, 440)]), Color("#393f60"))
-	draw_rect(Rect2(0, 360, 960, 180), Color("#39465a"))
-	draw_line(Vector2(0, 360), Vector2(960, 360), Color("#778498"), 3)
+	if forest_encounter:
+		for index in range(13):
+			var x := float(index * 83 - 27)
+			var crown := float(155 + posmod(index * 67, 115))
+			draw_rect(Rect2(x + 37, crown + 55, 12, 360 - crown - 55), Color("#38363b"))
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(x + 43, crown), Vector2(x + 89, crown + 124),
+				Vector2(x - 3, crown + 124),
+			]), Color("#2d514a") if index % 2 == 0 else Color("#355f52"))
+	draw_rect(Rect2(0, 360, 960, 180), Color("#435745") if forest_encounter else Color("#59604b"))
+	draw_line(Vector2(0, 360), Vector2(960, 360), Color("#829274"), 3)
 	for index in range(2):
 		var unit := fighters[index]
 		if not is_instance_valid(unit):
