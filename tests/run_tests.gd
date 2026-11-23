@@ -103,6 +103,8 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 	var animation_speed_slider := battle.find_child("UnitAnimationSpeedSlider", true, false) as HSlider
 	var movement_speed_slider := battle.find_child("UnitMovementSpeedSlider", true, false) as HSlider
 	_expect(board != null and not board.get_used_cells().is_empty(), "%s has a populated board" % scene_path)
+	_expect(board != null and board.has_node("TerrainArt") and board.self_modulate.a == 0.0,
+		"%s displays the shared pixel terrain over the authored grid" % scene_path)
 	_expect(manager != null, "%s has a TurnManager" % scene_path)
 	if manager != null:
 		_expect(manager.player_units.size() == expected_players, "%s spawns %d player units" % [scene_path, expected_players])

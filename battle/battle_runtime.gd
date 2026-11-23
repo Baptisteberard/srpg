@@ -1,6 +1,8 @@
 extends Node
 class_name BattleRuntime
 
+const TerrainArt = preload("res://tiles/terrain_art.gd")
+
 const UnitDefinitionScript = preload("res://units/unit_definition.gd")
 const EquipmentCatalogScript = preload("res://equipment/equipment_catalog.gd")
 const SkillCatalogScript = preload("res://skills/skill_catalog.gd")
@@ -115,6 +117,20 @@ func _apply_brigand_loadout(definition: UnitStats, loadout_index: int) -> void:
 
 
 func _ready() -> void:
+	var board := get_parent().get_node_or_null("Board") as Board
+	if board != null:
+		# The authored TileMaps remain the source for movement and terrain rules.
+		for layer_path in ["DepthSort/BackLayer", "DepthSort/FrontLayer", "TreeLayer"]:
+			var old_art := get_parent().get_node_or_null(layer_path) as TileMapLayer
+			if old_art != null:
+				old_art.hide()
+		var terrain := TerrainArt.new()
+		terrain.name = "TerrainArt"
+		terrain.board = board
+		terrain.z_index = -1
+		# Hide only the board's own tiles. Its unit children keep their colors.
+		board.self_modulate.a = 0.0
+		board.add_child(terrain)
 	var hud: BattleHud = get_node_or_null("UI") as BattleHud
 	var hp_overlay: UnitHpOverlay = get_node_or_null("HpOverlay") as UnitHpOverlay
 	var manager: TurnManager = get_node_or_null("TurnManager") as TurnManager
