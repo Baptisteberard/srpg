@@ -13,6 +13,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_test_fe8_map_sprite_import()
+	_test_fan_battle_packs()
 	await _test_roster_menu()
 	await _test_battle_scene("res://game.tscn", 1, 1)
 	await _test_battle_scene("res://game_map2.tscn", 2, 2)
@@ -32,6 +33,14 @@ func _run() -> void:
 	print("FAIL: %d of %d SRPG checks failed" % [failures.size(), checks_run])
 	quit(1)
 
+
+func _test_fan_battle_packs() -> void:
+	var presentation = preload("res://battle/battle_presentation.gd")
+	var loader = preload("res://battle/fighter_animation_pack.gd")
+	for key in presentation.FAN_PACKS:
+		var config: Array = presentation.FAN_PACKS[key]
+		var pack = loader.load_pack(config[0], config[1], config[2])
+		_expect(pack != null, "%s loads its idle, normal and critical attacks" % key)
 
 func _test_roster_menu() -> void:
 	var menu_scene := (load("res://main.tscn") as PackedScene).instantiate() as Main
@@ -86,7 +95,7 @@ func _test_roster_menu() -> void:
 		_expect(not path.is_empty() and archer.cell == attack_cell and presentation.visible,
 			"The forecast Attack button executes its projected movement and starts combat")
 		_expect(presentation.visible and enemy.current_hp == 1, "Battle opens before applying strike damage")
-		var pack = exchange.presentation.archer_pack
+		var pack = exchange.presentation.fan_packs.get("Archer:Bow")
 		_expect(pack != null and pack.frames.size() == 31 and not pack.modes[5]["windup"].is_empty()
 			and not pack.modes[6]["windup"].is_empty(),
 			"Archer combat loads the fan pack and both timed attack sequences")

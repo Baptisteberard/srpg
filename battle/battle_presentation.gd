@@ -4,6 +4,11 @@ const INK := Color("#101826")
 const GOLD := Color("#ffdc89")
 const FighterPack = preload("res://battle/fighter_animation_pack.gd")
 const BACKGROUND_DIR := "res://assets/local_battle_backgrounds/"
+const FAN_PACKS := {
+	"Archer:Bow": ["fletchling_bow/Bow.txt", Vector2(146, 104), [5, 6]],
+	"Brigand:Axe": ["oni_axe/Axe.txt", Vector2(160, 108), [1, 3]],
+	"Soldier:Spear": ["halberdier_lance/Lance.txt", Vector2(155, 104), [1, 3, 5, 6]],
+}
 
 var fighters: Array[Unit] = []
 var striker: Unit
@@ -13,7 +18,8 @@ var critical := false
 var forest_encounter := false
 var battle_background: Texture2D
 var backgrounds: Dictionary[String, Texture2D] = {}
-var archer_pack: RefCounted
+var fan_packs: Dictionary = {}
+var attack_mode := 1
 var attack_frame: Texture2D
 var progress := 0.0:
 	set(value):
@@ -30,8 +36,11 @@ func begin(attacker: Unit, defender: Unit) -> void:
 	fighters.assign([attacker, defender] if attacker.faction == Unit.Faction.PLAYER else [defender, attacker])
 	forest_encounter = attacker.get_terrain_avoid() > 0 or defender.get_terrain_avoid() > 0
 	battle_background = _get_battle_background("forest" if forest_encounter else "plains")
-	if archer_pack == null and (_is_archer(attacker) or _is_archer(defender)):
-		archer_pack = FighterPack.load_fletchling()
+	for fighter in fighters:
+		var key := _pack_key(fighter)
+		if FAN_PACKS.has(key) and not fan_packs.has(key):
+			var config: Array = FAN_PACKS[key]
+			fan_packs[key] = FighterPack.load_pack(config[0], config[1], config[2])
 	outcome = ""
 	show()
 	queue_redraw()
@@ -44,10 +53,16 @@ func windup(attacker: Unit, defender: Unit, is_critical: bool) -> void:
 	outcome = ""
 	progress = 0.0
 	if _uses_pack(attacker):
+		var ranged := attacker.equipped_weapon.weapon_type == &"Bow" \
+			or (attacker.equipped_weapon.weapon_type == &"Spear" and attacker.cell.distance_squared_to(defender.cell) > 1)
+		attack_mode = (6 if critical else 5) if ranged else (3 if critical else 1)
 		await _play_pack_phase("windup")
-		var flight := create_tween()
-		flight.tween_property(self, "progress", 1.0, 0.16)
-		await flight.finished
+		if ranged:
+			var flight := create_tween()
+			flight.tween_property(self, "progress", 1.0, 0.16)
+			await flight.finished
+		else:
+			progress = 1.0
 		return
 	var tween := create_tween()
 	tween.tween_property(self, "progress", 0.35, 0.26 if critical else 0.18)
@@ -75,16 +90,16 @@ func close() -> void:
 	target = null
 	hide()
 
-func _is_archer(unit: Unit) -> bool:
-	return unit != null and unit.unit_class_name == "Archer" and unit.equipped_weapon != null \
-		and unit.equipped_weapon.weapon_type == &"Bow"
+func _pack_key(unit: Unit) -> String:
+	if unit == null or unit.equipped_weapon == null:
+		return ""
+	return "%s:%s" % [unit.unit_class_name, unit.equipped_weapon.weapon_type]
 
 func _uses_pack(unit: Unit) -> bool:
-	return archer_pack != null and _is_archer(unit)
+	return fan_packs.get(_pack_key(unit)) != null
 
 func _play_pack_phase(phase: String) -> void:
-	var mode := 6 if critical else 5
-	for entry in archer_pack.modes[mode][phase]:
+	for entry in fan_packs[_pack_key(striker)].modes[attack_mode][phase]:
 		attack_frame = entry[0]
 		queue_redraw()
 		await create_tween().tween_interval(entry[1]).finished
@@ -152,11 +167,12 @@ func _draw() -> void:
 		var stage_scale := size / Vector2(960, 540)
 		draw_set_transform(origin * stage_scale, 0.0, Vector2(facing, 1) * stage_scale)
 		if _uses_pack(unit):
-			var frame: Texture2D = attack_frame if unit == striker and attack_frame != null else archer_pack.modes[10]["windup"][0][0]
+			var pack = fan_packs[_pack_key(unit)]
+			var frame: Texture2D = attack_frame if unit == striker and attack_frame != null else pack.modes[10]["windup"][0][0]
 			# The source actor faces left. Mirror around the feet for the left slot.
 			draw_set_transform(origin * stage_scale, 0.0, Vector2(-facing, 1) * stage_scale)
 			var sprite_scale := 4.0
-			draw_texture_rect(frame, Rect2(-Vector2(146, 104) * sprite_scale, frame.get_size() * sprite_scale), false,
+			draw_texture_rect(frame, Rect2(-pack.feet * sprite_scale, frame.get_size() * sprite_scale), false,
 				Color(1, 1, 1, tint.a))
 		else:
 			_draw_fighter(weapon, tint, motion)
@@ -167,7 +183,7 @@ func _draw() -> void:
 		draw_rect(Rect2(x, 469, 300.0 * unit.current_hp / maxi(unit.health, 1), 12), tint)
 		_label(Vector2(x, 510), "HP  %d / %d" % [unit.current_hp, unit.health], 18)
 	if striker != null and target != null:
-		if _uses_pack(striker) and outcome.is_empty() and progress > 0.0:
+		if _uses_pack(striker) and attack_mode in [5, 6] and outcome.is_empty() and progress > 0.0:
 			var direction := 1.0 if striker == fighters[0] else -1.0
 			var launch_x := 290.0 if direction > 0.0 else 670.0
 			var arrow_tip := Vector2(launch_x + direction * 400.0 * progress, 294)

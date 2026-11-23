@@ -1,18 +1,20 @@
 extends RefCounted
 
 const TICKS_PER_SECOND := 60.0
-const FLETCHLING_SCRIPT := "res://assets/fan_battle_reference/fletchling_bow/Bow.txt"
+const PACK_ROOT := "res://assets/fan_battle_reference/"
 
 var frames: Dictionary = {}
 var modes: Dictionary = {}
+var feet: Vector2
 
-static func load_fletchling() -> RefCounted:
+static func load_pack(script_path: String, anchor: Vector2, attack_modes: Array) -> RefCounted:
 	var pack := new()
-	if not pack._read_script(FLETCHLING_SCRIPT):
+	if not pack._read_script(PACK_ROOT.path_join(script_path), attack_modes):
 		return null
+	pack.feet = anchor
 	return pack
 
-func _read_script(path: String) -> bool:
+func _read_script(path: String, attack_modes: Array) -> bool:
 	if not FileAccess.file_exists(path):
 		return false
 	var mode_pattern := RegEx.create_from_string("^/// - Mode (\\d+)")
@@ -26,7 +28,8 @@ func _read_script(path: String) -> bool:
 			mode = int(heading.get_string(1))
 			modes[mode] = {"windup": [], "recovery": []}
 			released = false
-		elif line.begins_with("C05") or line.begins_with("C06"):
+		elif line.begins_with("C06") or (mode in [1, 3] and line.begins_with("C04")) \
+		or (mode in [5, 6] and line.begins_with("C05")):
 			released = true
 		elif mode >= 0:
 			var entry := frame_pattern.search(line)
@@ -40,10 +43,10 @@ func _read_script(path: String) -> bool:
 				frames[filename] = texture
 			var phase := "recovery" if released else "windup"
 			modes[mode][phase].append([frames[filename], int(entry.get_string(1)) / TICKS_PER_SECOND])
-	return modes.has(5) and modes.has(6) and modes.has(10) \
-		and not modes[5]["windup"].is_empty() and not modes[5]["recovery"].is_empty() \
-		and not modes[6]["windup"].is_empty() and not modes[6]["recovery"].is_empty() \
-		and not modes[10]["windup"].is_empty()
+	for attack_mode in attack_modes:
+		if not modes.has(attack_mode) or modes[attack_mode]["windup"].is_empty() or modes[attack_mode]["recovery"].is_empty():
+			return false
+	return modes.has(10) and not modes[10]["windup"].is_empty()
 
 func _load_frame(path: String) -> Texture2D:
 	var source := load(path) as Texture2D
@@ -52,6 +55,9 @@ func _load_frame(path: String) -> Texture2D:
 	var pixels := source.get_image()
 	pixels.convert(Image.FORMAT_RGBA8)
 	var background := pixels.get_pixel(0, 0)
+	if pixels.get_width() == 488:
+		# The actor occupies the left 240 pixels; the extra plane is an effect overlay.
+		pixels = pixels.get_region(Rect2i(0, 0, 240, pixels.get_height()))
 	# Preserve each full canvas so the feet stay anchored between poses.
 	# The top edge includes palette metadata outside the playable image.
 	for y in range(pixels.get_height()):
