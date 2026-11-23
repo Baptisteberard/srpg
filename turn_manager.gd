@@ -47,6 +47,7 @@ var selected_last_move_path: Array[Vector2i] = []
 var has_hovered_dest: bool = false
 var hovered_dest: Vector2i = Vector2i.ZERO
 var hovered_move_path: Array[Vector2i] = []
+var forecast_move_path: Array[Vector2i] = []
 var cursor_follow_active: bool = false
 var cursor_follow_last: Vector2i = Vector2i.ZERO
 var cursor_follow_steps: Array[Vector2i] = []
@@ -84,6 +85,7 @@ func _ready() -> void:
 		return
 	if not hud.skill_requested.is_connected(_on_skill_requested):
 		hud.skill_requested.connect(_on_skill_requested)
+	hud.forecast_attack_requested.connect(_on_forecast_attack_requested)
 	var battle_layer := CanvasLayer.new()
 	battle_layer.layer = 20
 	add_child(battle_layer)
@@ -502,7 +504,7 @@ func _update_hover_preview() -> void:
 				if selected.can_attack(occupant):
 					should_hover = true
 					hover_path = []
-					_set_combat_preview(selected, occupant, selected.cell)
+					_set_combat_preview(selected, occupant, selected.cell, hover_path)
 			else:
 				var choice: Dictionary = _build_attack_choice_from_path(selected, occupant, hovered_move_path)
 				if choice.is_empty():
@@ -510,7 +512,7 @@ func _update_hover_preview() -> void:
 				if not choice.is_empty():
 					should_hover = true
 					hover_path = choice["path"]
-					_set_combat_preview(selected, occupant, choice["cell"])
+					_set_combat_preview(selected, occupant, choice["cell"], hover_path)
 
 	if not should_hover:
 		_clear_hover_preview(hud.should_keep_forecast())
@@ -717,7 +719,7 @@ func _stand_cells_for_turn(attacker: Unit) -> Array[Vector2i]:
 		out.append(cell)
 	return out
 
-func _try_move_then_attack(attacker: Unit, defender: Unit) -> bool:
+func _try_move_then_attack(attacker: Unit, defender: Unit, choice: Dictionary = {}) -> bool:
 	if attacker == null or defender == null:
 		return false
 	if not attacker.is_alive() or not defender.is_alive():
@@ -727,7 +729,8 @@ func _try_move_then_attack(attacker: Unit, defender: Unit) -> bool:
 	if selected_has_moved:
 		return false
 
-	var choice: Dictionary = _find_hovered_attack_choice(attacker, defender)
+	if choice.is_empty():
+		choice = _find_hovered_attack_choice(attacker, defender)
 	if choice.is_empty():
 		choice = _find_attack_position(attacker, defender)
 	if choice.is_empty():
@@ -924,10 +927,25 @@ func _is_busy() -> bool:
 func _focus_unit(u: Unit) -> void:
 	hud.focus_unit(u)
 
-func _set_combat_preview(attacker: Unit, defender: Unit, attacker_cell: Vector2i) -> void:
+func _set_combat_preview(attacker: Unit, defender: Unit, attacker_cell: Vector2i, path: Array[Vector2i]) -> void:
+	forecast_move_path = path.duplicate()
 	hud.show_combat_preview(attacker, defender, attacker_cell)
 
+func _on_forecast_attack_requested(attacker: Unit, defender: Unit, attack_cell: Vector2i) -> void:
+	if phase != Phase.PLAYER or _is_busy() or not is_instance_valid(attacker) or not is_instance_valid(defender):
+		return
+	if attacker != selected or attacker.has_acted or occ.get(defender.cell) != defender:
+		return
+	if selected_has_moved:
+		if attack_cell == attacker.cell and attacker.can_attack(defender):
+			await _on_cell_clicked(defender.cell)
+		return
+	var choice := _build_attack_choice_from_path(attacker, defender, forecast_move_path)
+	if choice.get("cell") == attack_cell:
+		await _try_move_then_attack(attacker, defender, choice)
+
 func _clear_combat_preview() -> void:
+	forecast_move_path.clear()
 	hud.clear_combat_preview()
 
 func _refresh_stats_panel() -> void:

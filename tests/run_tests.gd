@@ -59,17 +59,32 @@ func _test_roster_menu() -> void:
 	if manager != null:
 		var archer := manager.player_units[0]
 		var enemy := manager.enemy_units[0]
-		enemy.cell = archer.cell + Vector2i(2, 0)
+		var hud := manager.hud as BattleHud
+		manager._select_unit(archer)
+		var path: Array[Vector2i] = []
+		for cell in manager.selected_reach_dests:
+			path = manager._shortest_path_with_turn_bias(archer, archer.cell, cell)
+			if not path.is_empty():
+				break
+		var attack_cell := path.back() as Vector2i if not path.is_empty() else archer.cell
+		manager.occ.erase(enemy.cell)
+		enemy.set_cell(attack_cell + Vector2i(2, 0), manager.board.cell_to_world(attack_cell + Vector2i(2, 0)))
+		manager.occ[enemy.cell] = enemy
 		archer.strength = 100
 		archer.speed = 100
 		archer.dexterity = 100
 		enemy.current_hp = 1
 		manager.combat_resolver.rng = null
 		var presentation: Control = manager.combat_resolver.presentation
-		manager.action_state = TurnManager.ActionState.COMBAT
 		var exchange = manager.combat_resolver
-		# begin() shows the layer synchronously, before yielding for the entrance.
-		exchange.resolve(archer, enemy)
+		manager._set_combat_preview(archer, enemy, attack_cell, path)
+		manager._clear_hover_preview(true)
+		hud.forecast_attack.pressed.emit()
+		var deadline := Time.get_ticks_msec() + 5000
+		while not presentation.visible and Time.get_ticks_msec() < deadline:
+			await process_frame
+		_expect(not path.is_empty() and archer.cell == attack_cell and presentation.visible,
+			"The forecast Attack button executes its projected movement and starts combat")
 		_expect(presentation.visible and enemy.current_hp == 1, "Battle opens before applying strike damage")
 		var pack = exchange.presentation.archer_pack
 		_expect(pack != null and pack.frames.size() == 31 and not pack.modes[5]["windup"].is_empty()
@@ -195,6 +210,8 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 		hud.show_combat_preview(odds_attacker, odds_defender, odds_defender.cell + Vector2i.RIGHT)
 		var forecast_text := hud.forecast_label.get_parsed_text()
 		target_odds_work = hud.forecast_panel.visible and not unit_info_panel.visible \
+			and hud.forecast_cards[0]["hp"].text.contains("→") \
+			and hud.forecast_cards[1]["weapon"].text == odds_defender.equipped_weapon.display_name \
 			and forecast_text.contains("Dmg %d" % odds_attacker.get_physical_damage_against(odds_defender)) \
 			and forecast_text.contains("Hit %d%%" % odds_attacker.get_hit_chance_against(odds_defender)) \
 			and forecast_text.contains("Crit %d%%" % odds_attacker.get_critical_chance_against(odds_defender)) \

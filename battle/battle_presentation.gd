@@ -3,6 +3,7 @@ extends Control
 const INK := Color("#101826")
 const GOLD := Color("#ffdc89")
 const FighterPack = preload("res://battle/fighter_animation_pack.gd")
+const BACKGROUND_DIR := "res://assets/local_battle_backgrounds/"
 
 var fighters: Array[Unit] = []
 var striker: Unit
@@ -10,6 +11,8 @@ var target: Unit
 var outcome := ""
 var critical := false
 var forest_encounter := false
+var battle_background: Texture2D
+var backgrounds: Dictionary[String, Texture2D] = {}
 var archer_pack: RefCounted
 var attack_frame: Texture2D
 var progress := 0.0:
@@ -26,6 +29,7 @@ func _ready() -> void:
 func begin(attacker: Unit, defender: Unit) -> void:
 	fighters.assign([attacker, defender] if attacker.faction == Unit.Faction.PLAYER else [defender, attacker])
 	forest_encounter = attacker.get_terrain_avoid() > 0 or defender.get_terrain_avoid() > 0
+	battle_background = _get_battle_background("forest" if forest_encounter else "plains")
 	if archer_pack == null and (_is_archer(attacker) or _is_archer(defender)):
 		archer_pack = FighterPack.load_fletchling()
 	outcome = ""
@@ -85,10 +89,27 @@ func _play_pack_phase(phase: String) -> void:
 		queue_redraw()
 		await create_tween().tween_interval(entry[1]).finished
 
-func _draw() -> void:
-	if fighters.size() != 2 or size.x <= 0 or size.y <= 0:
+func _get_battle_background(terrain: String) -> Texture2D:
+	if not backgrounds.has(terrain):
+		var path := BACKGROUND_DIR.path_join(terrain + ".png")
+		if FileAccess.file_exists(path):
+			var pixels := Image.load_from_file(path)
+			if pixels != null and not pixels.is_empty():
+				backgrounds[terrain] = ImageTexture.create_from_image(pixels)
+	return backgrounds.get(terrain)
+
+func _draw_battle_background() -> void:
+	if battle_background != null:
+		var viewport_rect := Rect2(Vector2.ZERO, size)
+		var source_size := battle_background.get_size()
+		var scale_to_cover := maxf(size.x / source_size.x, size.y / source_size.y)
+		var visible_size := size / scale_to_cover
+		var source_rect := Rect2((source_size - visible_size) * 0.5, visible_size)
+		draw_set_transform(Vector2.ZERO)
+		draw_texture_rect_region(battle_background, viewport_rect, source_rect)
+		draw_set_transform(Vector2.ZERO, 0.0, size / Vector2(960, 540))
+		draw_rect(Rect2(0, 436, 960, 104), Color(0.05, 0.08, 0.13, 0.85))
 		return
-	draw_set_transform(Vector2.ZERO, 0.0, size / Vector2(960, 540))
 	draw_rect(Rect2(0, 0, 960, 540), Color("#212742"))
 	draw_circle(Vector2(730, 145), 55, Color("#ded2a1"))
 	draw_colored_polygon(PackedVector2Array([Vector2(0, 350), Vector2(170, 180), Vector2(345, 320), Vector2(580, 205), Vector2(960, 335), Vector2(960, 440), Vector2(0, 440)]), Color("#393f60"))
@@ -103,6 +124,12 @@ func _draw() -> void:
 			]), Color("#2d514a") if index % 2 == 0 else Color("#355f52"))
 	draw_rect(Rect2(0, 360, 960, 180), Color("#435745") if forest_encounter else Color("#59604b"))
 	draw_line(Vector2(0, 360), Vector2(960, 360), Color("#829274"), 3)
+
+func _draw() -> void:
+	if fighters.size() != 2 or size.x <= 0 or size.y <= 0:
+		return
+	draw_set_transform(Vector2.ZERO, 0.0, size / Vector2(960, 540))
+	_draw_battle_background()
 	for index in range(2):
 		var unit := fighters[index]
 		if not is_instance_valid(unit):

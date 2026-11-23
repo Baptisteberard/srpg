@@ -5,6 +5,7 @@ signal damage_preview_changed(damage_by_unit: Dictionary)
 signal unit_visual_settings_changed(size_multiplier: float, vertical_offset: float)
 signal unit_animation_settings_changed(animation_speed_multiplier: float, movement_speed_multiplier: float)
 signal skill_requested(unit: Unit, skill: SkillDefinition)
+signal forecast_attack_requested(attacker: Unit, defender: Unit, attack_cell: Vector2i)
 
 const MIN_UNIT_SIZE_MULTIPLIER: float = 0.5
 const MAX_UNIT_SIZE_MULTIPLIER: float = 2.0
@@ -22,6 +23,8 @@ var preview_attacker_cell: Vector2i = Vector2i.ZERO
 var preview_last_target_ms: int = 0
 var forecast_panel: PanelContainer
 var forecast_label: RichTextLabel
+var forecast_attack: Button
+var forecast_cards: Array[Dictionary] = []
 
 var stats_panel: PanelContainer
 var unit_info_layout: VBoxContainer
@@ -406,42 +409,149 @@ func refresh() -> void:
 func _build_forecast_panel() -> void:
 	forecast_panel = PanelContainer.new()
 	forecast_panel.name = "CombatForecastPanel"
+	forecast_panel.add_theme_stylebox_override("panel", _forecast_style(Color("#161e2b"), Color("#435163")))
 	forecast_panel.hide()
 	add_child(forecast_panel)
-	forecast_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	forecast_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	forecast_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	forecast_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	forecast_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	forecast_panel.offset_left = -376.0
-	forecast_panel.offset_right = -16.0
-	forecast_panel.offset_top = -16.0
-	forecast_panel.offset_bottom = -16.0
-	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 8)
-	forecast_panel.add_child(margin)
+	forecast_panel.offset_top = -14.0
+	forecast_panel.offset_bottom = -14.0
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 12)
+	forecast_panel.add_child(columns)
+	forecast_cards.append(_build_forecast_card(columns, Color("#79c6cf")))
+	var exchange := VBoxContainer.new()
+	exchange.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	exchange.size_flags_stretch_ratio = 1.65
+	exchange.add_theme_constant_override("separation", 6)
+	columns.add_child(exchange)
+	var title := Label.new()
+	title.text = "Combat forecast"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	exchange.add_child(title)
 	forecast_label = RichTextLabel.new()
 	forecast_label.bbcode_enabled = true
 	forecast_label.fit_content = true
 	forecast_label.scroll_active = false
-	margin.add_child(forecast_label)
+	forecast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	exchange.add_child(forecast_label)
+	forecast_attack = Button.new()
+	forecast_attack.text = "Attack"
+	forecast_attack.custom_minimum_size = Vector2(124, 32)
+	forecast_attack.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	forecast_attack.focus_mode = Control.FOCUS_NONE
+	forecast_attack.pressed.connect(func() -> void:
+		forecast_attack_requested.emit(preview_attacker, preview_defender, preview_attacker_cell)
+	)
+	exchange.add_child(forecast_attack)
+	forecast_cards.append(_build_forecast_card(columns, Color("#edaa7b")))
+
+func _forecast_style(fill: Color, border: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(7)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 9
+	style.content_margin_bottom = 9
+	return style
+
+func _build_forecast_card(parent: HBoxContainer, accent: Color) -> Dictionary:
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.add_theme_stylebox_override("panel", _forecast_style(Color("#202c3a"), accent.darkened(0.55)))
+	parent.add_child(card)
+	var content := VBoxContainer.new()
+	card.add_child(content)
+	var identity := HBoxContainer.new()
+	identity.add_theme_constant_override("separation", 8)
+	content.add_child(identity)
+	var sprite_preview := TextureRect.new()
+	sprite_preview.custom_minimum_size = Vector2(44, 44)
+	sprite_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite_preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	identity.add_child(sprite_preview)
+	var nameplate := VBoxContainer.new()
+	nameplate.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	identity.add_child(nameplate)
+	var unit_name_label := Label.new()
+	unit_name_label.add_theme_font_size_override("font_size", 20)
+	unit_name_label.add_theme_color_override("font_color", accent)
+	unit_name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	nameplate.add_child(unit_name_label)
+	var class_label := Label.new()
+	class_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	nameplate.add_child(class_label)
+	var weapon := Label.new()
+	weapon.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	content.add_child(weapon)
+	var hp := Label.new()
+	hp.add_theme_font_size_override("font_size", 19)
+	content.add_child(hp)
+	var meter := Control.new()
+	meter.custom_minimum_size.y = 8
+	content.add_child(meter)
+	var meter_base := ColorRect.new()
+	meter_base.color = Color("#101822")
+	meter.add_child(meter_base)
+	meter_base.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var hp_loss := ColorRect.new()
+	hp_loss.color = accent.darkened(0.53)
+	meter_base.add_child(hp_loss)
+	hp_loss.anchor_bottom = 1.0
+	var hp_left := ColorRect.new()
+	hp_left.color = accent
+	meter_base.add_child(hp_left)
+	hp_left.anchor_bottom = 1.0
+	return {"sprite": sprite_preview, "name": unit_name_label, "class": class_label,
+		"weapon": weapon, "hp": hp, "loss": hp_loss, "left": hp_left}
+
+func _update_forecast_card(card: Dictionary, unit: Unit, hp_after: int) -> void:
+	card["name"].text = unit.get_display_name()
+	card["class"].text = unit.get_class_display_name()
+	card["weapon"].text = unit.equipped_weapon.display_name if unit.equipped_weapon else "Unarmed"
+	card["hp"].text = "HP   %d → %d / %d" % [unit.current_hp, hp_after, unit.health]
+	card["hp"].tooltip_text = "Projected HP if normal attacks land. Misses and critical hits can change the result."
+	card["loss"].anchor_right = float(unit.current_hp) / maxi(1, unit.health)
+	card["left"].anchor_right = float(hp_after) / maxi(1, unit.health)
+	var sprite := unit._get_sprite()
+	card["sprite"].texture = sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame)
 
 func _refresh_forecast_panel() -> void:
 	var attacker := preview_attacker
 	var defender := preview_defender
 	var attack_cell := preview_attacker_cell
-	var lines: Array[String] = ["[b]Combat forecast[/b]"]
-	lines.append(_forecast_side(attacker, defender, attack_cell, defender.cell))
-	lines.append(_forecast_side(defender, attacker, defender.cell, attack_cell))
+	var result := CombatResolver.forecast(attacker, defender, attack_cell)
+	_update_forecast_card(forecast_cards[0], attacker, result["attacker_hp_after"])
+	_update_forecast_card(forecast_cards[1], defender, result["defender_hp_after"])
+	var lines: Array[String] = []
+	if result["can_attack"]:
+		var attacker_row := _forecast_strike(attacker, defender, defender.cell)
+		if not result["defender_can_counter"]:
+			lines.append(attacker_row)
+			lines.append("[color=#aab7c7]No reply · out of range[/color]")
+		else:
+			var defender_row := _forecast_strike(defender, attacker, attack_cell)
+			var first: String = attacker_row if result["attacker_strikes_first"] else defender_row
+			var second: String = defender_row if result["attacker_strikes_first"] else attacker_row
+			lines.append("1. " + first)
+			lines.append("2. " + second + " [color=#aab7c7](if alive)[/color]")
+	else:
+		lines.append("Target out of range")
+	lines.append("%s   ·   %s" % [_avoid_metric(attacker, attack_cell), _avoid_metric(defender, defender.cell)])
 	forecast_label.text = "\n".join(lines)
+	forecast_attack.disabled = not result["can_attack"]
+	var half_width := minf(490.0, (get_viewport().get_visible_rect().size.x - 28.0) * 0.5)
+	forecast_panel.offset_left = -half_width
+	forecast_panel.offset_right = half_width
 	forecast_panel.show()
-	forecast_panel.reset_size()
-	forecast_panel.size.x = 360.0
-	forecast_panel.position = get_viewport().get_visible_rect().size - forecast_panel.size - Vector2(16, 16)
+	forecast_panel.offset_top = forecast_panel.offset_bottom
 
-func _forecast_side(actor: Unit, opponent: Unit, actor_cell: Vector2i, opponent_cell: Vector2i) -> String:
-	var identity := "[b]%s[/b]  ·  HP %d/%d" % [actor.get_display_name(), actor.current_hp, actor.health]
-	if not actor.can_attack_from_cell(actor_cell, opponent_cell):
-		return identity + "\nOut of range"
+func _forecast_strike(actor: Unit, opponent: Unit, opponent_cell: Vector2i) -> String:
 	var damage := _metric("Dmg %d" % actor.get_physical_damage_against(opponent),
 		"Damage = max(0, Strength %d + Weapon Damage %d − Target Armor %d). Critical hits deal twice this damage." % [
 			actor.strength, actor.get_weapon_damage(), opponent.get_armor_value()])
@@ -452,7 +562,8 @@ func _forecast_side(actor: Unit, opponent: Unit, actor_cell: Vector2i, opponent_
 	var crit := _metric("Crit %d%%" % actor.get_critical_chance_against(opponent, opponent_cell),
 		"Crit = clamp(Base Crit %d + floor(Dexterity %d / 3) + Flat Crit %d − Target Avoid %d, 0, 100). Rolled after a hit." % [
 			actor.get_weapon_base_crit(), actor.dexterity, actor.flat_crit_modifier, evasion])
-	return "%s\n%s   %s   %s   %s" % [identity, damage, accuracy, crit, _avoid_metric(actor, actor_cell)]
+	var color := "#79c6cf" if actor == preview_attacker else "#edaa7b"
+	return "[color=%s]%s[/color]   %s   %s   %s" % [color, actor.get_display_name(), damage, accuracy, crit]
 
 func _metric(caption: String, formula: String) -> String:
 	return '[hint="%s"]%s[/hint]' % [formula, caption]

@@ -9,3 +9,5 @@
 # Local copyrighted reference art. Runtime code falls back safely when absent.
 /assets/fire_emblem_sacred_stones/map_sprites.png
 /assets/fire_emblem_sacred_stones/map_sprites.png.import
+/assets/local_battle_backgrounds/*.png
+/assets/local_battle_backgrounds/*.png.import
