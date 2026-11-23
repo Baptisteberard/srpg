@@ -2,6 +2,7 @@ extends Control
 
 const INK := Color("#101826")
 const GOLD := Color("#ffdc89")
+const FighterPack = preload("res://battle/fighter_animation_pack.gd")
 
 var fighters: Array[Unit] = []
 var striker: Unit
@@ -9,6 +10,8 @@ var target: Unit
 var outcome := ""
 var critical := false
 var forest_encounter := false
+var archer_pack: RefCounted
+var attack_frame: Texture2D
 var progress := 0.0:
 	set(value):
 		progress = value
@@ -17,11 +20,14 @@ var progress := 0.0:
 func _ready() -> void:
 	set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	mouse_filter = MOUSE_FILTER_STOP
+	texture_filter = TEXTURE_FILTER_NEAREST
 	hide()
 
 func begin(attacker: Unit, defender: Unit) -> void:
 	fighters.assign([attacker, defender] if attacker.faction == Unit.Faction.PLAYER else [defender, attacker])
 	forest_encounter = attacker.get_terrain_avoid() > 0 or defender.get_terrain_avoid() > 0
+	if archer_pack == null and (_is_archer(attacker) or _is_archer(defender)):
+		archer_pack = FighterPack.load_fletchling()
 	outcome = ""
 	show()
 	queue_redraw()
@@ -33,6 +39,12 @@ func windup(attacker: Unit, defender: Unit, is_critical: bool) -> void:
 	critical = is_critical
 	outcome = ""
 	progress = 0.0
+	if _uses_pack(attacker):
+		await _play_pack_phase("windup")
+		var flight := create_tween()
+		flight.tween_property(self, "progress", 1.0, 0.16)
+		await flight.finished
+		return
 	var tween := create_tween()
 	tween.tween_property(self, "progress", 0.35, 0.26 if critical else 0.18)
 	tween.tween_property(self, "progress", 1.0, 0.20)
@@ -41,11 +53,14 @@ func windup(attacker: Unit, defender: Unit, is_critical: bool) -> void:
 func impact(hit: bool, damage: int) -> void:
 	outcome = ("CRITICAL  " if critical else "") + str(damage) if hit else "MISS"
 	queue_redraw()
+	if _uses_pack(striker):
+		await _play_pack_phase("recovery")
 	await create_tween().tween_interval(0.32).finished
 	var recovery := create_tween()
 	recovery.tween_property(self, "progress", 0.0, 0.20)
 	await recovery.finished
 	striker = null
+	attack_frame = null
 	target = null
 	outcome = ""
 	queue_redraw()
@@ -55,6 +70,20 @@ func close() -> void:
 	striker = null
 	target = null
 	hide()
+
+func _is_archer(unit: Unit) -> bool:
+	return unit != null and unit.unit_class_name == "Archer" and unit.equipped_weapon != null \
+		and unit.equipped_weapon.weapon_type == &"Bow"
+
+func _uses_pack(unit: Unit) -> bool:
+	return archer_pack != null and _is_archer(unit)
+
+func _play_pack_phase(phase: String) -> void:
+	var mode := 6 if critical else 5
+	for entry in archer_pack.modes[mode][phase]:
+		attack_frame = entry[0]
+		queue_redraw()
+		await create_tween().tween_interval(entry[1]).finished
 
 func _draw() -> void:
 	if fighters.size() != 2 or size.x <= 0 or size.y <= 0:
@@ -82,7 +111,7 @@ func _draw() -> void:
 		var origin := Vector2(242 if index == 0 else 718, 382)
 		var weapon := String(unit.equipped_weapon.weapon_type).to_lower() if unit.equipped_weapon else "unarmed"
 		var motion := progress if unit == striker else 0.0
-		if unit == striker:
+		if unit == striker and not _uses_pack(unit):
 			var reach := 18.0 if weapon == "bow" else (200.0 if weapon == "dagger" else 160.0)
 			origin.x += facing * lerpf(-15.0, reach, motion)
 		elif unit == target and not outcome.is_empty():
@@ -95,7 +124,15 @@ func _draw() -> void:
 			tint.a = 0.35
 		var stage_scale := size / Vector2(960, 540)
 		draw_set_transform(origin * stage_scale, 0.0, Vector2(facing, 1) * stage_scale)
-		_draw_fighter(weapon, tint, motion)
+		if _uses_pack(unit):
+			var frame: Texture2D = attack_frame if unit == striker and attack_frame != null else archer_pack.modes[10]["windup"][0][0]
+			# The source actor faces left. Mirror around the feet for the left slot.
+			draw_set_transform(origin * stage_scale, 0.0, Vector2(-facing, 1) * stage_scale)
+			var sprite_scale := 4.0
+			draw_texture_rect(frame, Rect2(-Vector2(146, 104) * sprite_scale, frame.get_size() * sprite_scale), false,
+				Color(1, 1, 1, tint.a))
+		else:
+			_draw_fighter(weapon, tint, motion)
 		draw_set_transform(Vector2.ZERO, 0.0, size / Vector2(960, 540))
 		var x := 50.0 if index == 0 else 610.0
 		_label(Vector2(x, 455), unit.get_display_name() + "  /  " + unit.get_class_display_name(), 20)
@@ -103,6 +140,11 @@ func _draw() -> void:
 		draw_rect(Rect2(x, 469, 300.0 * unit.current_hp / maxi(unit.health, 1), 12), tint)
 		_label(Vector2(x, 510), "HP  %d / %d" % [unit.current_hp, unit.health], 18)
 	if striker != null and target != null:
+		if _uses_pack(striker) and outcome.is_empty() and progress > 0.0:
+			var direction := 1.0 if striker == fighters[0] else -1.0
+			var launch_x := 290.0 if direction > 0.0 else 670.0
+			var arrow_tip := Vector2(launch_x + direction * 400.0 * progress, 294)
+			draw_line(arrow_tip - Vector2(direction * 38.0, 0), arrow_tip, GOLD, 3.0)
 		if outcome.is_empty() and critical:
 			_label(Vector2(414, 115), "CRITICAL", 25)
 		elif not outcome.is_empty():

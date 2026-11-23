@@ -71,6 +71,10 @@ func _test_roster_menu() -> void:
 		# begin() shows the layer synchronously, before yielding for the entrance.
 		exchange.resolve(archer, enemy)
 		_expect(presentation.visible and enemy.current_hp == 1, "Battle opens before applying strike damage")
+		var pack = exchange.presentation.archer_pack
+		_expect(pack != null and pack.frames.size() == 31 and not pack.modes[5]["windup"].is_empty()
+			and not pack.modes[6]["windup"].is_empty(),
+			"Archer combat loads the fan pack and both timed attack sequences")
 		while presentation.visible:
 			await process_frame
 		_expect(not enemy.is_alive() and not manager.enemy_units.has(enemy),
