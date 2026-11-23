@@ -39,6 +39,26 @@ const CLASS_LAYOUTS: Dictionary = {
 		"display_name": "Brigand",
 		"moving_origin": Vector2i(182, 4090),
 	},
+	"soldier": {
+		"display_name": "Soldier",
+		"moving_origin": Vector2i(16, 4090),
+	},
+	"archer m": {
+		"display_name": "Archer M",
+		"moving_origin": Vector2i(16, 765),
+	},
+	"thief": {
+		"display_name": "Thief",
+		"moving_origin": Vector2i(16, 2060),
+	},
+	"fighter": {
+		"display_name": "Fighter",
+		"moving_origin": Vector2i(182, 1341),
+	},
+	"knight": {
+		"display_name": "Knight",
+		"moving_origin": Vector2i(182, 330),
+	},
 }
 
 static var _source_image: Image

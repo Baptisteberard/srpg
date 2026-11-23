@@ -9,7 +9,8 @@
 These game assets are copyrighted by their respective owners (Nintendo / Intelligent Systems). They were downloaded for local prototype and reference use. Do not redistribute or use commercially without the necessary permission.
 
 The project reads this sheet locally through `FE8MapSpriteImporter`. The
-importer currently recognizes the labelled Recruit and Brigand blocks, removes
+importer recognizes Recruit, Brigand, Soldier, Archer M, Thief, Fighter, and
+Knight for the seven playable roster slots. It removes
 the sheet backgrounds, applies the original FE8 faction palettes, and reads the
 two idle columns plus the vertical side/down/up movement columns. Rightward
 movement mirrors the side sequence. Each idle has three frames and each movement

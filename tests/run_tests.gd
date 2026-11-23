@@ -40,6 +40,13 @@ func _test_roster_menu() -> void:
 	for definition in menu_scene.roster:
 		all_animated = all_animated and definition.fe8_map_sprite_animation.is_valid()
 	_expect(all_animated, "Every selectable unit has a working animation")
+	if FE8MapSpriteImporter.source_available():
+		var expected_sources := ["Recruit", "Brigand", "Soldier", "Archer M", "Thief", "Fighter", "Knight"]
+		var every_sprite_from_sheet := true
+		for index in range(expected_sources.size()):
+			var animation := menu_scene.roster[index].fe8_map_sprite_animation
+			every_sprite_from_sheet = every_sprite_from_sheet and animation == FE8MapSpriteImporter.load_animation(expected_sources[index], "ally")
+		_expect(every_sprite_from_sheet, "All seven roster previews use their mapped blocks from the local sheet")
 	menu_scene.picker.select(3)
 	menu_scene.picker.item_selected.emit(3)
 	menu_scene.map2_button.pressed.emit()

@@ -3,6 +3,12 @@ extends RefCounted
 const Gear = preload("res://equipment/equipment_catalog.gd")
 const Heal = preload("res://skills/heal.tres")
 const Definition = preload("res://units/unit_definition.gd")
+const MAP_SPRITE_CLASSES = {
+	"Spearman": "Soldier",
+	"Archer": "Archer M",
+	"Scout": "Thief",
+	"Man-at-Arms": "Fighter",
+}
 
 # Stats and growths are ordered HP, Strength, Speed, Dexterity, Intellect.
 const ENTRIES = [
@@ -36,7 +42,8 @@ static func create(index: int, enemy: bool) -> UnitStats:
 	if index == 0:
 		unit.active_skills.append(Heal)
 	var palette := "enemy" if enemy else "ally"
-	unit.fe8_map_sprite_animation = FE8MapSpriteImporter.load_animation(unit.unit_class_name, palette)
+	var sprite_class: String = MAP_SPRITE_CLASSES.get(unit.unit_class_name, unit.unit_class_name)
+	unit.fe8_map_sprite_animation = FE8MapSpriteImporter.load_animation(sprite_class, palette)
 	if unit.fe8_map_sprite_animation == null:
 		var color: Color = entry[5]
 		unit.fe8_map_sprite_animation = _build_original_sprite(index, color, palette)
