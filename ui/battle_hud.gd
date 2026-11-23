@@ -639,8 +639,8 @@ func _build_skills_text(unit: Unit) -> String:
 	var attack_name := "Unarmed Attack"
 	if unit.equipped_weapon != null:
 		attack_name = "%s Attack" % str(unit.equipped_weapon.weapon_type)
-	var dexterity_crit: int = unit.dexterity / 4
-	var formulas := "[b]Hit Formula[/b]\nHit = clamp(Base Hit %d + Dexterity %d + Flat Hit %d - Target Evasion, 0, 100)\n[b]Crit Formula[/b]\nCrit = clamp(Base Crit %d + floor(Dexterity %d / 4) + Flat Crit %d - Target Evasion, 0, 100)\nDexterity Crit contribution: %d" % [
+	var dexterity_crit: int = unit.dexterity / 3
+	var formulas := "[b]Hit Formula[/b]\nHit = clamp(Base Hit %d + Dexterity %d + Flat Hit %d - Target Evasion, 0, 100)\n[b]Crit Formula[/b]\nCrit = clamp(Base Crit %d + floor(Dexterity %d / 3) + Flat Crit %d - Target Evasion, 0, 100)\nDexterity Crit contribution: %d" % [
 		unit.get_weapon_base_hit(),
 		unit.dexterity,
 		unit.flat_hit_modifier,

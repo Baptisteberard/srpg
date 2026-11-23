@@ -45,7 +45,7 @@ Status meanings:
 | Automatic defensive Weapon Attack | Partial | Legacy reciprocal attacks exist, but their behavior is not the approved target rule. Exact target timing remains undecided. |
 | GDD hit formula | Implemented | Weapon Attacks use `clamp(Base Hit + Dexterity + flat Hit - target Evasion, 0, 100)`, including forest Avoid. |
 | Cannot-miss property | Not implemented | No skill property system exists. |
-| Critical chance formula | Implemented | After a hit, Weapon Attacks roll `clamp(Base Crit + floor(Dexterity / 4) + flat Crit - target Evasion, 0, 100)`. |
+| Critical chance formula | Implemented | After a hit, Weapon Attacks roll `clamp(Base Crit + floor(Dexterity / 3) + flat Crit - target Evasion, 0, 100)`. |
 | Critical damage | Implemented | Critical Weapon Attacks deal `2 × Final Damage`, after Armor reduction. |
 | Physical formula | Partial | Strength, Weapon Damage, and target Armor are implemented. Skill Power and flat modifiers do not exist. |
 | Magical formula | Not implemented | Intellect and magical actions have no combat implementation. |

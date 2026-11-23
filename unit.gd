@@ -350,7 +350,7 @@ func get_critical_chance_against(target: Unit) -> int:
 	if target == null:
 		return 0
 	return clampi(
-		get_weapon_base_crit() + dexterity / 4 + flat_crit_modifier - target.get_evasion(),
+		get_weapon_base_crit() + dexterity / 3 + flat_crit_modifier - target.get_evasion(),
 		0,
 		100
 	)

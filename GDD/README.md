@@ -141,7 +141,7 @@ skip the accuracy roll and also display `100%`.
 
 ```text
 Displayed Crit = clamp(
-    Skill Base Crit + floor(Dexterity / 4) + Flat Crit Modifiers
+    Skill Base Crit + floor(Dexterity / 3) + Flat Crit Modifiers
     - Target Evasion,
     0,
     100
@@ -159,7 +159,7 @@ Example:
 Sword Base Crit = 5
 Attacker Dexterity = 20
 Target Evasion = 8
-Displayed Crit = clamp(5 + floor(20 / 4) - 8, 0, 100) = 2%
+Displayed Crit = clamp(5 + floor(20 / 3) - 8, 0, 100) = 3%
 ```
 
 Critical damage is `2 × Final Damage` (**initial tuning value**). Healing and

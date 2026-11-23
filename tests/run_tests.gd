@@ -424,7 +424,7 @@ func _test_equipment() -> void:
 	_expect(
 		attacker.get_accuracy() == 130 \
 		and attacker.get_hit_chance_against(accuracy_target) == 100 \
-		and attacker.get_critical_chance_against(accuracy_target) == 16,
+		and attacker.get_critical_chance_against(accuracy_target) == 19,
 		"Accuracy and critical chance use weapon bases, Dexterity, target Evasion, and their upper clamps"
 	)
 	attacker.flat_hit_modifier = -500
