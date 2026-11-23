@@ -49,6 +49,27 @@ func _test_roster_menu() -> void:
 		and manager.enemy_units.size() == 2
 		and manager.enemy_units[0].unit_class_name != manager.enemy_units[1].unit_class_name,
 		"Map 2 starts with the selected unit and two distinct roster enemies")
+	if manager != null:
+		var archer := manager.player_units[0]
+		var enemy := manager.enemy_units[0]
+		enemy.cell = archer.cell + Vector2i(2, 0)
+		archer.strength = 100
+		archer.speed = 100
+		archer.dexterity = 100
+		enemy.current_hp = 1
+		manager.combat_resolver.rng = null
+		var presentation: Control = manager.combat_resolver.presentation
+		manager.action_state = TurnManager.ActionState.COMBAT
+		var exchange = manager.combat_resolver
+		# begin() shows the layer synchronously, before yielding for the entrance.
+		exchange.resolve(archer, enemy)
+		_expect(presentation.visible and enemy.current_hp == 1, "Battle opens before applying strike damage")
+		while presentation.visible:
+			await process_frame
+		_expect(not enemy.is_alive() and not manager.enemy_units.has(enemy),
+			"Lethal impact updates HP, removes the defeated unit, and closes the presentation")
+		while is_instance_valid(enemy):
+			await process_frame
 	menu_scene.queue_free()
 	await process_frame
 

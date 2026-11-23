@@ -1,10 +1,13 @@
 extends RefCounted
 class_name CombatResolver
 
+const Presentation = preload("res://battle/battle_presentation.gd")
+
 signal unit_defeated(unit: Unit, victor: Unit)
 signal combat_state_changed
 
 var rng: RandomNumberGenerator
+var presentation: Presentation
 
 
 static func forecast(attacker: Unit, defender: Unit, attacker_cell: Vector2i) -> Dictionary:
@@ -75,31 +78,37 @@ func resolve(attacker: Unit, defender: Unit) -> void:
 		first = defender
 		second = attacker
 
+	if presentation != null:
+		await presentation.begin(attacker, defender)
 	await _perform_strike(first, second)
-	if not is_instance_valid(first) or not is_instance_valid(second):
-		return
-	if not first.is_alive() or not second.is_alive():
-		return
-	if not second.can_attack(first):
-		combat_state_changed.emit()
-		return
-	await _perform_strike(second, first)
+	if is_instance_valid(first) and is_instance_valid(second) and second.can_attack(first):
+		await _perform_strike(second, first)
+	if presentation != null:
+		presentation.close()
 
 
 func _perform_strike(attacker: Unit, defender: Unit) -> void:
 	if attacker == null or defender == null or not attacker.can_attack(defender):
 		return
 
-	await attacker.play_attack_animation(defender.global_position)
+	var hit_roll: int = rng.randi_range(1, 100) if rng != null else 1
+	var hit := hit_roll <= attacker.get_hit_chance_against(defender)
+	var is_critical := false
+	if hit:
+		var critical_roll: int = rng.randi_range(1, 100) if rng != null else 100
+		is_critical = critical_roll <= attacker.get_critical_chance_against(defender)
+	if presentation != null:
+		await presentation.windup(attacker, defender, is_critical)
+	else:
+		await attacker.play_attack_animation(defender.global_position)
 	if not is_instance_valid(attacker) or not is_instance_valid(defender):
 		return
 
-	var hit_roll: int = rng.randi_range(1, 100) if rng != null else 1
-	if hit_roll <= attacker.get_hit_chance_against(defender):
-		var critical_roll: int = rng.randi_range(1, 100) if rng != null else 100
-		var is_critical := critical_roll <= attacker.get_critical_chance_against(defender)
-		var damage: int = attacker.get_physical_damage_against(defender, is_critical)
-		defender.take_damage(damage)
-		if not defender.is_alive():
-			unit_defeated.emit(defender, attacker)
+	var damage := 0
+	if hit:
+		damage = defender.take_damage(attacker.get_physical_damage_against(defender, is_critical))
+	if presentation != null:
+		await presentation.impact(hit, damage)
+	if is_instance_valid(defender) and not defender.is_alive():
+		unit_defeated.emit(defender, attacker)
 	combat_state_changed.emit()

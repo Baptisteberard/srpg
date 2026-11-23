@@ -6,6 +6,7 @@ const GridNavigatorScript = preload("res://battle/grid_navigator.gd")
 const UnitDefinitionScript = preload("res://units/unit_definition.gd")
 const BattleHudScript = preload("res://ui/battle_hud.gd")
 const CombatResolverScript = preload("res://battle/combat_resolver.gd")
+const BattlePresentation = preload("res://battle/battle_presentation.gd")
 const EnemyAIScript = preload("res://battle/enemy_ai.gd")
 const BASE_MOVE_STEP_TIME: float = 0.12
 
@@ -83,6 +84,12 @@ func _ready() -> void:
 		return
 	if not hud.skill_requested.is_connected(_on_skill_requested):
 		hud.skill_requested.connect(_on_skill_requested)
+	var battle_layer := CanvasLayer.new()
+	battle_layer.layer = 20
+	add_child(battle_layer)
+	var presentation := BattlePresentation.new()
+	battle_layer.add_child(presentation)
+	combat_resolver.presentation = presentation
 	highlight = get_node_or_null(highlight_path) as HighlightMap
 	if highlight != null:
 		highlight.configure_from_board(board)
