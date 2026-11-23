@@ -481,6 +481,10 @@ func _update_hover_preview() -> void:
 		_clear_hover_preview()
 		return
 
+	if hud.is_pointer_over_forecast():
+		_clear_hover_preview(true)
+		return
+
 	var cell: Vector2i = board.world_to_cell(board.get_global_mouse_position())
 	var hover_path: Array[Vector2i] = []
 	var should_hover: bool = false
@@ -490,7 +494,6 @@ func _update_hover_preview() -> void:
 		should_hover = true
 		hover_path = _build_cursor_follow_path(cell)
 		hovered_move_path = hover_path.duplicate()
-		_clear_combat_preview()
 	# Attack hover (red tiles) on enemy cells.
 	elif occ.has(cell):
 		var occupant: Unit = occ[cell]
@@ -508,16 +511,12 @@ func _update_hover_preview() -> void:
 					should_hover = true
 					hover_path = choice["path"]
 					_set_combat_preview(selected, occupant, choice["cell"])
-				else:
-					_clear_combat_preview()
-		else:
-			_clear_combat_preview()
-	else:
-		_clear_combat_preview()
 
 	if not should_hover:
-		_clear_hover_preview()
+		_clear_hover_preview(hud.should_keep_forecast())
 		return
+	if not occ.has(cell) and not hud.should_keep_forecast():
+		_clear_combat_preview()
 
 	if has_hovered_dest and hovered_dest == cell:
 		return
@@ -530,12 +529,13 @@ func _update_hover_preview() -> void:
 	highlight.set_hover_cell(cell)
 	highlight.set_preview_path(preview)
 
-func _clear_hover_preview() -> void:
+func _clear_hover_preview(keep_forecast: bool = false) -> void:
 	var had_hover: bool = has_hovered_dest
 	has_hovered_dest = false
 	hovered_dest = Vector2i.ZERO
 	hovered_move_path.clear()
-	_clear_combat_preview()
+	if not keep_forecast:
+		_clear_combat_preview()
 	if highlight != null:
 		if had_hover:
 			highlight.clear_hover_cell()

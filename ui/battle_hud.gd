@@ -19,6 +19,9 @@ var focused_unit: Unit
 var preview_attacker: Unit
 var preview_defender: Unit
 var preview_attacker_cell: Vector2i = Vector2i.ZERO
+var preview_last_target_ms: int = 0
+var forecast_panel: PanelContainer
+var forecast_label: RichTextLabel
 
 var stats_panel: PanelContainer
 var unit_info_layout: VBoxContainer
@@ -53,6 +56,7 @@ var unit_movement_speed_multiplier: float = 1.0
 
 func _ready() -> void:
 	_build_stats_panel()
+	_build_forecast_panel()
 	_build_progression_panel()
 	_build_unit_visual_settings_panel()
 
@@ -315,6 +319,7 @@ func show_combat_preview(attacker: Unit, defender: Unit, attacker_cell: Vector2i
 	if attacker == null or defender == null:
 		clear_combat_preview()
 		return
+	preview_last_target_ms = Time.get_ticks_msec()
 	var changed: bool = preview_attacker != attacker \
 		or preview_defender != defender \
 		or preview_attacker_cell != attacker_cell
@@ -324,6 +329,12 @@ func show_combat_preview(attacker: Unit, defender: Unit, attacker_cell: Vector2i
 	if changed:
 		_emit_damage_preview()
 		refresh()
+
+func is_pointer_over_forecast() -> bool:
+	return forecast_panel.visible and forecast_panel.get_global_rect().has_point(forecast_panel.get_global_mouse_position())
+
+func should_keep_forecast() -> bool:
+	return forecast_panel.visible and (is_pointer_over_forecast() or Time.get_ticks_msec() - preview_last_target_ms < 750)
 
 
 func clear_combat_preview() -> void:
@@ -374,14 +385,11 @@ func refresh() -> void:
 	and is_instance_valid(preview_defender) \
 	and preview_attacker.is_alive() \
 	and preview_defender.is_alive():
-		stats_panel.visible = true
-		var preview_side_unit: Unit = preview_defender
-		if focused_unit != null and is_instance_valid(focused_unit):
-			preview_side_unit = focused_unit
-		_refresh_unit_window(preview_side_unit)
-		_position_stats_panel_for_unit(preview_side_unit)
+		stats_panel.hide()
+		_refresh_forecast_panel()
 		return
 
+	forecast_panel.hide()
 	if focused_unit == null or not is_instance_valid(focused_unit) or not focused_unit.is_alive():
 		stats_panel.visible = false
 		unit_identity_label.text = ""
@@ -394,6 +402,66 @@ func refresh() -> void:
 	stats_panel.visible = true
 	_refresh_unit_window(focused_unit)
 	_position_stats_panel_for_unit(focused_unit)
+
+func _build_forecast_panel() -> void:
+	forecast_panel = PanelContainer.new()
+	forecast_panel.name = "CombatForecastPanel"
+	forecast_panel.hide()
+	add_child(forecast_panel)
+	forecast_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	forecast_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	forecast_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	forecast_panel.offset_left = -376.0
+	forecast_panel.offset_right = -16.0
+	forecast_panel.offset_top = -16.0
+	forecast_panel.offset_bottom = -16.0
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 8)
+	forecast_panel.add_child(margin)
+	forecast_label = RichTextLabel.new()
+	forecast_label.bbcode_enabled = true
+	forecast_label.fit_content = true
+	forecast_label.scroll_active = false
+	margin.add_child(forecast_label)
+
+func _refresh_forecast_panel() -> void:
+	var attacker := preview_attacker
+	var defender := preview_defender
+	var attack_cell := preview_attacker_cell
+	var lines: Array[String] = ["[b]Combat forecast[/b]"]
+	lines.append(_forecast_side(attacker, defender, attack_cell, defender.cell))
+	lines.append(_forecast_side(defender, attacker, defender.cell, attack_cell))
+	forecast_label.text = "\n".join(lines)
+	forecast_panel.show()
+	forecast_panel.reset_size()
+	forecast_panel.size.x = 360.0
+	forecast_panel.position = get_viewport().get_visible_rect().size - forecast_panel.size - Vector2(16, 16)
+
+func _forecast_side(actor: Unit, opponent: Unit, actor_cell: Vector2i, opponent_cell: Vector2i) -> String:
+	var identity := "[b]%s[/b]  ·  HP %d/%d" % [actor.get_display_name(), actor.current_hp, actor.health]
+	if not actor.can_attack_from_cell(actor_cell, opponent_cell):
+		return identity + "\nOut of range"
+	var damage := _metric("Dmg %d" % actor.get_physical_damage_against(opponent),
+		"Damage = max(0, Strength %d + Weapon Damage %d − Target Armor %d). Critical hits deal twice this damage." % [
+			actor.strength, actor.get_weapon_damage(), opponent.get_armor_value()])
+	var evasion := opponent.get_evasion(opponent_cell)
+	var accuracy := _metric("Hit %d%%" % actor.get_hit_chance_against(opponent, opponent_cell),
+		"Hit = clamp(Base Hit %d + Dexterity %d + Flat Hit %d − Target Avoid %d, 0, 100)" % [
+			actor.get_weapon_base_hit(), actor.dexterity, actor.flat_hit_modifier, evasion])
+	var crit := _metric("Crit %d%%" % actor.get_critical_chance_against(opponent, opponent_cell),
+		"Crit = clamp(Base Crit %d + floor(Dexterity %d / 3) + Flat Crit %d − Target Avoid %d, 0, 100). Rolled after a hit." % [
+			actor.get_weapon_base_crit(), actor.dexterity, actor.flat_crit_modifier, evasion])
+	return "%s\n%s   %s   %s   %s" % [identity, damage, accuracy, crit, _avoid_metric(actor, actor_cell)]
+
+func _metric(caption: String, formula: String) -> String:
+	return '[hint="%s"]%s[/hint]' % [formula, caption]
+
+func _avoid_metric(unit: Unit, cell: Vector2i) -> String:
+	return _metric("Avoid %d" % unit.get_evasion(cell),
+		"Avoid = max(0, Battle Speed %d + Terrain Avoid %d + Flat Avoid %d).\nBattle Speed = max(0, Speed %d − max(0, Weight %d − Strength %d))." % [
+			unit.get_battle_speed(), unit.get_terrain_avoid(cell), unit.flat_evasion_modifier,
+			unit.speed, unit.get_total_weight(), unit.strength])
 
 
 func _build_stats_panel() -> void:
@@ -628,52 +696,20 @@ func _build_equipment_text(unit: Unit) -> String:
 
 
 func _build_skills_text(unit: Unit) -> String:
-	var attack_name := "Unarmed Attack"
-	if unit.equipped_weapon != null:
-		attack_name = "%s Attack" % str(unit.equipped_weapon.weapon_type)
-	var dexterity_crit: int = unit.dexterity / 3
-	var formulas := "[b]Hit Formula[/b]\nHit = clamp(Base Hit %d + Dexterity %d + Flat Hit %d - Target Evasion, 0, 100)\n[b]Crit Formula[/b]\nCrit = clamp(Base Crit %d + floor(Dexterity %d / 3) + Flat Crit %d - Target Evasion, 0, 100)\nDexterity Crit contribution: %d" % [
-		unit.get_weapon_base_hit(),
-		unit.dexterity,
-		unit.flat_hit_modifier,
-		unit.get_weapon_base_crit(),
-		unit.dexterity,
-		unit.flat_crit_modifier,
-		dexterity_crit,
-	]
-	var target: Unit = null
-	if preview_attacker == unit and preview_defender != null and is_instance_valid(preview_defender):
-		target = preview_defender
-	elif preview_defender == unit and preview_attacker != null and is_instance_valid(preview_attacker):
-		target = preview_attacker
-	var target_result := ""
-	if target != null and target.is_alive():
-		var target_cell := preview_attacker_cell if target == preview_attacker else target.cell
-		target_result = "\n[b]Against %s[/b]\nHit: %d%% | Crit: %d%% | Target Evasion: %d" % [
-			target.get_display_name(),
-			unit.get_hit_chance_against(target, target_cell),
-			unit.get_critical_chance_against(target, target_cell),
-			target.get_evasion(target_cell),
-		]
-		if unit == preview_defender and not unit.can_attack_from_cell(unit.cell, target_cell):
-			target_result = "\n[b]Against %s[/b]\nOut of range" % target.get_display_name()
-	var active_lines: Array[String] = []
+	var damage := _metric("Dmg %d" % unit.get_physical_damage(),
+		"Damage = Strength %d + Weapon Damage %d" % [unit.strength, unit.get_weapon_damage()])
+	var accuracy := _metric("Accuracy %d" % unit.get_accuracy(),
+		"Accuracy = Base Hit %d + Dexterity %d + Flat Hit %d" % [
+			unit.get_weapon_base_hit(), unit.dexterity, unit.flat_hit_modifier])
+	var crit_value: int = unit.get_weapon_base_crit() + unit.dexterity / 3 + unit.flat_crit_modifier
+	var crit := _metric("Crit %d" % crit_value,
+		"Base crit total = Base Crit %d + floor(Dexterity %d / 3) + Flat Crit %d" % [
+			unit.get_weapon_base_crit(), unit.dexterity, unit.flat_crit_modifier])
+	var lines: Array[String] = [damage, accuracy, _avoid_metric(unit, unit.cell), crit]
 	for skill in unit.active_skills:
 		if skill != null and skill.is_healing_skill():
-			active_lines.append("%s: Heal self for %d HP (cannot miss or crit)" % [
-				skill.display_name,
-				unit.get_healing_amount(skill),
-			])
-	var active_text := "None" if active_lines.is_empty() else "\n".join(active_lines)
-	return "[b]Weapon Attack[/b]\n%s\nPhysical Power: %d (Strength %d + Weapon %d)\n\n%s%s\n\n[b]Active Skills[/b]\n%s\n\n[b]Passive Skills[/b]\nNone" % [
-		attack_name,
-		unit.get_physical_damage(),
-		unit.strength,
-		unit.get_weapon_damage(),
-		formulas,
-		target_result,
-		active_text,
-	]
+			lines.append("%s: restores %d HP" % [skill.display_name, unit.get_healing_amount(skill)])
+	return "\n".join(lines)
 
 func _on_unit_info_tab_changed(_tab: int) -> void:
 	refresh.call_deferred()

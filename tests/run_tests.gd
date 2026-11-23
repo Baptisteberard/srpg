@@ -171,20 +171,20 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 			and not characteristics_label.text.contains("Damage") \
 			and equipment_label.text.contains(focused_unit.equipped_weapon.display_name) \
 			and equipment_label.text.contains(focused_unit.equipped_armor.display_name) \
-			and skills_label.text.contains("Hit Formula") \
-			and skills_label.text.contains("Crit Formula") \
-			and skills_label.text.contains("Hit = clamp(Base Hit") \
-			and skills_label.text.contains("Target Evasion, 0, 100)")
+			and skills_label.get_parsed_text().contains("Accuracy") \
+			and skills_label.get_parsed_text().contains("Avoid") \
+			and not skills_label.get_parsed_text().contains("Accuracy =") \
+			and skills_label.text.contains('[hint="Accuracy =')
 	_expect(unit_tabs_work, "%s shows one unit window with three information tabs" % scene_path)
 	if unit_tabs_work:
-		unit_info_tabs.current_tab = 2
+		unit_info_tabs.current_tab = 1
 		await process_frame
 		await process_frame
-		var skills_size := unit_info_panel.size
+		var equipment_size := unit_info_panel.size
 		unit_info_tabs.current_tab = 0
 		await process_frame
 		await process_frame
-		_expect(unit_info_panel.size.x < skills_size.x and unit_info_panel.size.y < skills_size.y,
+		_expect(unit_info_panel.size.y < equipment_size.y,
 			"%s shrinks the unit window when switching back to Characteristics" % scene_path)
 	var target_odds_work := false
 	if manager != null and hud != null and skills_label != null \
@@ -192,12 +192,16 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 		var odds_attacker: Unit = manager.player_units[0]
 		var odds_defender: Unit = manager.enemy_units[0]
 		hud.focus_unit(odds_attacker)
-		hud.show_combat_preview(odds_attacker, odds_defender, odds_attacker.cell)
-		target_odds_work = skills_label.text.contains("Against %s" % odds_defender.get_display_name()) \
-			and skills_label.text.contains("Hit: %d%%" % odds_attacker.get_hit_chance_against(odds_defender)) \
-			and skills_label.text.contains("Crit: %d%%" % odds_attacker.get_critical_chance_against(odds_defender)) \
-			and skills_label.text.contains("Target Evasion: %d" % odds_defender.get_evasion())
+		hud.show_combat_preview(odds_attacker, odds_defender, odds_defender.cell + Vector2i.RIGHT)
+		var forecast_text := hud.forecast_label.get_parsed_text()
+		target_odds_work = hud.forecast_panel.visible and not unit_info_panel.visible \
+			and forecast_text.contains("Dmg %d" % odds_attacker.get_physical_damage_against(odds_defender)) \
+			and forecast_text.contains("Hit %d%%" % odds_attacker.get_hit_chance_against(odds_defender)) \
+			and forecast_text.contains("Crit %d%%" % odds_attacker.get_critical_chance_against(odds_defender)) \
+			and not forecast_text.contains("clamp") \
+			and hud.forecast_label.text.contains('[hint="Damage =')
 		hud.clear_combat_preview()
+		target_odds_work = target_odds_work and not hud.forecast_panel.visible and unit_info_panel.visible
 	_expect(target_odds_work, "%s displays final Hit and Crit chances against the previewed target" % scene_path)
 	if scene_path == "res://game.tscn" and manager != null and board != null:
 		var forest_cell := Vector2i(9999, 9999)
