@@ -172,6 +172,16 @@ func _test_battle_scene(scene_path: String, expected_players: int, expected_enem
 			and skills_label.text.contains("Hit = clamp(Base Hit") \
 			and skills_label.text.contains("Target Evasion, 0, 100)")
 	_expect(unit_tabs_work, "%s shows one unit window with three information tabs" % scene_path)
+	if unit_tabs_work:
+		unit_info_tabs.current_tab = 2
+		await process_frame
+		await process_frame
+		var skills_size := unit_info_panel.size
+		unit_info_tabs.current_tab = 0
+		await process_frame
+		await process_frame
+		_expect(unit_info_panel.size.x < skills_size.x and unit_info_panel.size.y < skills_size.y,
+			"%s shrinks the unit window when switching back to Characteristics" % scene_path)
 	var target_odds_work := false
 	if manager != null and hud != null and skills_label != null \
 	and not manager.player_units.is_empty() and not manager.enemy_units.is_empty():

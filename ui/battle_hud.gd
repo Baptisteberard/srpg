@@ -420,7 +420,6 @@ func _build_stats_panel() -> void:
 	unit_identity_label.bbcode_enabled = true
 	unit_identity_label.scroll_active = false
 	unit_identity_label.fit_content = true
-	unit_identity_label.custom_minimum_size.y = 42.0
 	unit_identity_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	unit_identity_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	unit_info_layout.add_child(unit_identity_label)
@@ -478,37 +477,37 @@ func _position_stats_panel_for_unit(unit: Unit) -> void:
 		return
 
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var max_content_width: float = max(300.0, viewport_size.x - 48.0)
-	var measured_width: float = maxf(
-		_measure_label_text_width(unit_identity_label, max_content_width),
-		maxf(
-			_measure_label_text_width(stats_label, max_content_width),
-			maxf(
-				_measure_label_text_width(equipment_label, max_content_width),
-				_measure_label_text_width(skills_label, max_content_width)
-			)
-		)
+	var panel_padding := stats_panel.get_theme_stylebox("panel").get_minimum_size() + Vector2(16, 16)
+	var tab_padding := stats_tabs.get_theme_stylebox("panel").get_minimum_size()
+	var tab_bar := stats_tabs.get_tab_bar()
+	var tab_font := tab_bar.get_theme_font("font")
+	var tab_font_size := tab_bar.get_theme_font_size("font_size")
+	var tab_padding_x := maxf(
+		tab_bar.get_theme_stylebox("tab_selected").get_minimum_size().x,
+		tab_bar.get_theme_stylebox("tab_unselected").get_minimum_size().x
 	)
-	var content_width: float = clampf(maxf(300.0, measured_width), 300.0, max_content_width)
-	var stats_height: float = _measure_label_text_height(stats_label, content_width)
-	var equipment_height: float = _measure_label_text_height(equipment_label, content_width)
-	var skills_height: float = _measure_label_text_height(skills_label, content_width)
-	var content_height: float = maxf(stats_height, maxf(equipment_height, skills_height))
-	var identity_height: float = maxf(42.0, _measure_label_text_height(unit_identity_label, content_width))
-	_set_unit_info_label_size(unit_identity_label, content_width, identity_height)
-	_set_unit_info_label_size(stats_label, content_width, stats_height)
-	_set_unit_info_label_size(equipment_label, content_width, equipment_height)
-	_set_unit_info_label_size(skills_label, content_width, skills_height)
-
-	var panel_width: float = content_width + 16.0
-	var desired_height: float = maxf(220.0, content_height + identity_height + 64.0)
-	var panel_height: float = min(desired_height, max(220.0, viewport_size.y - 32.0))
-	var tabs_height: float = maxf(140.0, panel_height - identity_height - 22.0)
-	stats_tabs.custom_minimum_size = Vector2(content_width, tabs_height)
-	var scroll_height: float = maxf(100.0, tabs_height - 36.0)
+	var tab_width := 0.0
+	for index in range(stats_tabs.get_tab_count()):
+		tab_width += ceilf(tab_font.get_string_size(stats_tabs.get_tab_title(index), HORIZONTAL_ALIGNMENT_LEFT, -1, tab_font_size).x) + tab_padding_x
+	var active_label: RichTextLabel = [stats_label, equipment_label, skills_label][stats_tabs.current_tab]
+	var max_width := maxf(1.0, viewport_size.x - panel_padding.x - tab_padding.x - 32.0)
+	var text_width := maxf(
+		_measure_label_text_width(unit_identity_label, max_width),
+		_measure_label_text_width(active_label, max_width)
+	)
+	var content_width := minf(maxf(tab_width, text_width + tab_padding.x), max_width)
+	var identity_height := _measure_label_text_height(unit_identity_label, content_width)
+	var text_height := _measure_label_text_height(active_label, content_width - tab_padding.x)
+	var separation := float(unit_info_layout.get_theme_constant("separation"))
+	var button_height := skill_action_button.get_combined_minimum_size().y + separation if skill_action_button.visible else 0.0
+	var chrome_height := panel_padding.y + identity_height + separation + tab_bar.get_combined_minimum_size().y + tab_padding.y + button_height
+	var scroll_height := clampf(text_height + 2.0, 1.0, maxf(1.0, viewport_size.y - 32.0 - chrome_height))
+	var active_scroll: ScrollContainer = [stats_scroll, equipment_scroll, skills_scroll][stats_tabs.current_tab]
 	for scroll in [stats_scroll, equipment_scroll, skills_scroll]:
-		if scroll != null:
-			scroll.custom_minimum_size = Vector2(content_width, scroll_height)
+		scroll.custom_minimum_size = Vector2.ZERO
+	active_scroll.custom_minimum_size.y = scroll_height
+	var panel_width := content_width + panel_padding.x
+	var panel_height := chrome_height + scroll_height
 
 	stats_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	var is_enemy: bool = unit != null and unit.faction == Unit.Faction.ENEMY
@@ -519,15 +518,8 @@ func _position_stats_panel_for_unit(unit: Unit) -> void:
 	equipment_label.horizontal_alignment = alignment
 	skills_label.horizontal_alignment = alignment
 	var panel_y: float = viewport_size.y - panel_height - 16.0
-	stats_panel.offset_left = panel_x
-	stats_panel.offset_top = panel_y
-	stats_panel.offset_right = panel_x + panel_width
-	stats_panel.offset_bottom = panel_y + panel_height
-
-
-func _set_unit_info_label_size(label: RichTextLabel, width: float, height: float) -> void:
-	label.custom_minimum_size = Vector2(width, height)
-	label.update_minimum_size()
+	stats_panel.size = Vector2(panel_width, panel_height)
+	stats_panel.position = Vector2(panel_x, panel_y)
 
 
 func _measure_label_text_width(label: RichTextLabel, max_content_width: float) -> float:
@@ -684,7 +676,7 @@ func _build_skills_text(unit: Unit) -> String:
 	]
 
 func _on_unit_info_tab_changed(_tab: int) -> void:
-	_refresh_skill_action_button(focused_unit)
+	refresh.call_deferred()
 
 func _refresh_skill_action_button(unit: Unit) -> void:
 	if skill_action_button == null:
