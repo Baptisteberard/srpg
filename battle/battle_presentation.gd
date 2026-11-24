@@ -17,7 +17,9 @@ const FAN_PACKS := {
 	"Archer:Bow": ["fletchling_bow/Bow.txt", Vector2(146, 104), [5, 6]],
 	"Brigand:Axe": ["oni_axe/Axe.txt", Vector2(160, 108), [1, 3]],
 	"Soldier:Spear": ["halberdier_lance/Lance.txt", Vector2(155, 104), [1, 3, 5, 6]],
-	"Thief:Dagger": ["hooded_knife/Knife.txt", Vector2(162, 106), [1, 3]],
+	# The project keeps the gameplay item as a Dagger, while using Cath's
+	# vanilla FE6 sword animation for the Thief battle presentation.
+	"Thief:Dagger": ["cath_vanilla_sword/Sword.txt", Vector2(140, 164), [1, 3]],
 	"Fighter:Axe": ["fighter_axe/Axe.txt", Vector2(153, 105), [1, 3]],
 	"Knight:Spear": ["stalwart_lance/Lance.txt", Vector2(159, 101), [1, 3, 5, 6]],
 }
