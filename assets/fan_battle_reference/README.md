@@ -1,5 +1,10 @@
 # Battle animation sources
 
+The field/map Thief sprite is the vanilla FE8 map sprite extracted into
+`assets/fire_emblem_sacred_stones/map_sprites.png`. The battle-animation pack
+listed below is a community animation because no vanilla FE8 Thief battle pack
+is included in this project.
+
 - Recruit uses [Waleed's male Recruit lance variant](https://github.com/Klokinator/FE-Repo/tree/main/Battle%20Animations/Infantry%20-%20%28Lnc%29%20Soldiers%2C%20Halberdiers/%5BRecruit-Base%5D%20Variant%20%5BM%5D%20by%20Waleed). [Upstream credits](recruit_lance/CREDITS.txt)
 - Archer uses Fletchling Bow. [Credits and source](fletchling_bow/SOURCE.md)
 - Brigand uses [Oni Chieftain Axe](https://github.com/Klokinator/FE-Repo/tree/main/Battle%20Animations/Infantry%20-%20%28Axe%29%20Brigs%2C%20Pirates%2C%20Zerkers/%5BAxe-Custom%5D%20Oni%20Chieftain%20%5BM%5D%20by%20Dora%20Drago), by Dora Drago. [Upstream credits](oni_axe/CREDITS.txt)
